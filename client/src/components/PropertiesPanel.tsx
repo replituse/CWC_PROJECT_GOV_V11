@@ -44,6 +44,35 @@ function NumericInput({ value, onValueChange, ...props }: NumericInputProps) {
   );
 }
 
+function VScheduleInput({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [raw, setRaw] = useState(() => String(value));
+
+  useEffect(() => {
+    setRaw(String(value));
+  }, [value]);
+
+  return (
+    <input
+      className="flex-1 h-6 px-1.5 text-[10px] border rounded"
+      type="text"
+      inputMode="decimal"
+      value={raw}
+      onChange={e => {
+        const v = e.target.value;
+        if (v === '' || v === '-' || /^-?\d*\.?\d*$/.test(v)) {
+          setRaw(v);
+        }
+      }}
+      onBlur={() => {
+        const parsed = parseFloat(raw);
+        const final = isNaN(parsed) ? 0 : parsed;
+        setRaw(String(final));
+        onChange(final);
+      }}
+    />
+  );
+}
+
 function PcharEditor({ pType, activePc, updatePcharData }: {
   pType: number;
   activePc: PcharType;
@@ -1225,19 +1254,19 @@ export function PropertiesPanel() {
                         {pts.map((pt, idx) => (
                           <div key={idx} className="flex items-center gap-2 group">
                             <Label className="text-[10px] w-4">T</Label>
-                            <input className="flex-1 h-6 px-1.5 text-[10px] border rounded"
+                            <VScheduleInput
                               value={pt.t}
-                              onChange={e => {
+                              onChange={v => {
                                 const np = [...pts];
-                                np[idx] = { ...np[idx], t: parseFloat(e.target.value) || 0 };
+                                np[idx] = { ...np[idx], t: v };
                                 updateVSchedule(schedNum, np);
                               }} />
                             <Label className="text-[10px] w-4">G</Label>
-                            <input className="flex-1 h-6 px-1.5 text-[10px] border rounded"
+                            <VScheduleInput
                               value={pt.g}
-                              onChange={e => {
+                              onChange={v => {
                                 const np = [...pts];
-                                np[idx] = { ...np[idx], g: parseFloat(e.target.value) || 0 };
+                                np[idx] = { ...np[idx], g: v };
                                 updateVSchedule(schedNum, np);
                               }} />
                             <button className="opacity-0 group-hover:opacity-100 text-destructive"
