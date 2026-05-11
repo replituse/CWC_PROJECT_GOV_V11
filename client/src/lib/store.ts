@@ -98,6 +98,7 @@ interface EdgeData extends Record<string, unknown> {
   syncSpeed?: number | string;
   turbFriction?: number | string;
   windage?: number | string;
+  turbineDiameter?: number | string;
   operationMode?: string;
   vScheduleNumber?: number;
   designHead?: number | string;
@@ -290,6 +291,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       rq: 'flow',
       rhead: 'elevation',
       valveDiam: 'diameter',
+      turbineDiameter: 'diameter',
     };
 
     const cacheableFields = Object.keys(fieldMapping);
@@ -507,6 +509,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       rq: 'flow',
       rhead: 'elevation',
       valveDiam: 'diameter',
+      turbineDiameter: 'diameter',
     };
 
     const cacheableFields = Object.keys(fieldMapping);

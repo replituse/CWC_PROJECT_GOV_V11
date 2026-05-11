@@ -1150,7 +1150,7 @@ export function PropertiesPanel() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="grid gap-1">
-                    <Label htmlFor="syncSpeed" className="text-xs">Sync Speed RSPEED (RPM)</Label>
+                    <Label htmlFor="syncSpeed" className="text-xs">Sync Speed SYNCSPD (RPM)</Label>
                     <NumericInput id="syncSpeed" data-testid="input-syncspeed"
                       value={formData.syncSpeed}
                       onValueChange={v => handleLocalChange('syncSpeed', v)} className="h-7 text-xs" />
@@ -1160,6 +1160,12 @@ export function PropertiesPanel() {
                     <NumericInput id="turb-wr2" data-testid="input-turb-wr2"
                       value={formData.wr2}
                       onValueChange={v => handleLocalChange('wr2', v)} className="h-7 text-xs" />
+                  </div>
+                  <div className="grid gap-1">
+                    <Label htmlFor="turbineDiameter" className="text-xs">Diameter ({currentUnit === 'SI' ? 'm' : 'ft'})</Label>
+                    <NumericInput id="turbineDiameter" data-testid="input-turbine-diameter"
+                      value={formData.turbineDiameter}
+                      onValueChange={v => handleLocalChange('turbineDiameter', v)} className="h-7 text-xs" />
                   </div>
                   <div className="grid gap-1">
                     <Label htmlFor="turbFriction" className="text-xs">Friction</Label>
@@ -1183,13 +1189,14 @@ export function PropertiesPanel() {
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="TURBINE">TURBINE</SelectItem>
+                      <SelectItem value="GENERATE">GENERATE</SelectItem>
                       <SelectItem value="TURBGOV">TURBGOV</SelectItem>
                       <SelectItem value="EMERGENCY">EMERGENCY</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
 
-                {(opMode === 'TURBGOV' || opMode === 'EMERGENCY') && (
+                {(opMode === 'GENERATE' || opMode === 'TURBGOV' || opMode === 'EMERGENCY') && (
                   <div className="grid gap-2">
                     <Label htmlFor="vScheduleNumber" className="text-xs">VSCHEDULE Number</Label>
                     <NumericInput id="vScheduleNumber" data-testid="input-vschednum"
@@ -1198,7 +1205,7 @@ export function PropertiesPanel() {
                   </div>
                 )}
 
-                {(opMode === 'TURBGOV' || opMode === 'EMERGENCY') && (() => {
+                {(opMode === 'GENERATE' || opMode === 'TURBGOV' || opMode === 'EMERGENCY') && (() => {
                   const schedNum = Number(formData.vScheduleNumber ?? 1);
                   const pts: { t: number; g: number }[] = vSchedules[schedNum] || [];
                   return (

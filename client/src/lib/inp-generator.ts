@@ -427,37 +427,36 @@ export function generateInpFile(nodes: WhamoNode[], edges: WhamoEdge[], autoDown
   });
 
   const exportedTurbineLabels = new Set<string>();
-  nodes.filter(n => n.type === 'turbine').forEach(n => {
-    const d = n.data;
-    if (!d) return;
-    const label = d.label;
+  const writeTurbineBlock = (d: any, unit: 'SI' | 'FPS') => {
+    const label = d.label as string;
     if (exportedTurbineLabels.has(label)) return;
     exportedTurbineLabels.add(label);
     addComment(d.comment);
     const tType = d.turbineType ?? 1;
-    const rspeed = Number(d.syncSpeed ?? 0);
+    const syncspd = Number(d.syncSpeed ?? 0);
     const wr2 = Number(d.wr2 ?? 0);
     const friction = Number(d.turbFriction ?? 0);
     const windage = Number(d.windage ?? 0);
-    addL(`TURBINE ID ${label} TYPE ${tType} RSPEED ${rspeed} WR2 ${wr2}`);
-    addL(` FRICTION ${friction} WINDAGE ${windage} FINISH`);
+    addL('TURBINE');
+    addL(` ID ${label}`);
+    addL(` TYPE ${tType}`);
+    addL(` SYNCSPD ${syncspd}`);
+    addL(` WR2 ${wr2}`);
+    if (d.turbineDiameter !== undefined && d.turbineDiameter !== '' && Number(d.turbineDiameter) !== 0) {
+      addL(` DIAMETER ${toFPS(Number(d.turbineDiameter), unit, 'diameter')}`);
+    }
+    addL(` FRICTION ${friction}`);
+    addL(` WINDAGE ${windage}`);
+    addL('FINISH');
     addL('');
+  };
+  nodes.filter(n => n.type === 'turbine').forEach(n => {
+    if (!n.data) return;
+    writeTurbineBlock(n.data, (n.data.unit || globalUnit) as 'SI' | 'FPS');
   });
   edges.filter(e => e.data?.type === 'turbine').forEach(e => {
-    const d = e.data;
-    if (!d) return;
-    const label = d.label as string;
-    if (exportedTurbineLabels.has(label)) return;
-    exportedTurbineLabels.add(label);
-    addComment(d.comment as string | undefined);
-    const tType = d.turbineType ?? 1;
-    const rspeed = Number(d.syncSpeed ?? 0);
-    const wr2 = Number(d.wr2 ?? 0);
-    const friction = Number(d.turbFriction ?? 0);
-    const windage = Number(d.windage ?? 0);
-    addL(`TURBINE ID ${label} TYPE ${tType} RSPEED ${rspeed} WR2 ${wr2}`);
-    addL(` FRICTION ${friction} WINDAGE ${windage} FINISH`);
-    addL('');
+    if (!e.data) return;
+    writeTurbineBlock(e.data, ((e.data.unit || globalUnit) as 'SI' | 'FPS'));
   });
 
   // PCHAR sections (global, per pump type)
@@ -536,21 +535,25 @@ export function generateInpFile(nodes: WhamoNode[], edges: WhamoEdge[], autoDown
     if (!label || seenOpturb.has(label)) return;
     seenOpturb.add(label);
     const mode = (d.operationMode as string) || 'TURBINE';
-    if (mode === 'TURBGOV' || mode === 'EMERGENCY') {
+    addL('OPTURB');
+    addL(` ID ${label}`);
+    if (mode === 'GENERATE' || mode === 'TURBGOV' || mode === 'EMERGENCY') {
+      addL(` ${mode}`);
       const schedNum = (d.vScheduleNumber as number) ?? 1;
-      addL(`OPTURB ID ${label} ${mode} ${schedNum} FINISH`);
+      addL(` VSCHEDULE ${schedNum}`);
     } else {
-      addL(`OPTURB ID ${label} TURBINE FINISH`);
+      addL(' TURBINE');
     }
+    addL('FINISH');
     addL('');
   });
 
-  // VSCHEDULE blocks for turbines with TURBGOV/EMERGENCY modes
+  // VSCHEDULE blocks for turbines with GENERATE/TURBGOV/EMERGENCY modes
   const vSchedules = state.vSchedules || {};
   const usedVScheduleNums = new Set<number>();
   allTurbines.forEach(el => {
     const mode = (el.data?.operationMode as string) || 'TURBINE';
-    if (mode === 'TURBGOV' || mode === 'EMERGENCY') {
+    if (mode === 'GENERATE' || mode === 'TURBGOV' || mode === 'EMERGENCY') {
       const num = Number((el.data as any)?.vScheduleNumber ?? 1);
       if (!isNaN(num)) usedVScheduleNums.add(num);
     }
@@ -558,8 +561,9 @@ export function generateInpFile(nodes: WhamoNode[], edges: WhamoEdge[], autoDown
   usedVScheduleNums.forEach(schedNum => {
     const pts = vSchedules[schedNum] || [];
     if (pts.length > 0) {
-      const pairStr = pts.map(p => `T ${p.t} G ${p.g}`).join(' ');
-      addL(`SCHEDULE  VSCHEDULE ${schedNum} ${pairStr}`);
+      addL('SCHEDULE');
+      addL(` VSCHEDULE ${schedNum}`);
+      pts.forEach(p => addL(`   T ${p.t}   G ${p.g}`));
       addL('FINISH');
       addL('');
     }
