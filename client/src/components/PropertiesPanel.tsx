@@ -1163,6 +1163,23 @@ export function PropertiesPanel() {
                         const next = nums.length > 0 ? Math.max(...nums) + 1 : 1;
                         addTcharType(next);
                       }}>+ TCHAR</Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-6 text-[10px] px-1.5 text-destructive border-destructive/40 hover:bg-destructive/10"
+                      disabled={tcharTypeOptions.length <= 1}
+                      onClick={() => {
+                        const nums = Object.keys(tcharData).map(Number).sort((a, b) => a - b);
+                        if (nums.length <= 1) return;
+                        deleteTcharType(tType);
+                        const remaining = nums.filter(n => n !== tType);
+                        if (remaining.length > 0) {
+                          handleLocalChange('turbineType', remaining[0]);
+                        }
+                      }}
+                    >
+                      <Trash2 className="h-3 w-3 mr-0.5" /> Del
+                    </Button>
                   </div>
                 </div>
 
