@@ -1,4 +1,4 @@
-import { useState, useEffect, type ComponentProps } from 'react';
+import { useState, useEffect, useRef, type ComponentProps } from 'react';
 import { useNetworkStore, type UnitSystem, type PcharType, type TcharType } from '@/lib/store';
 import { PIPE_MATERIALS, PIPE_MATERIALS_BY_ID } from '@/lib/pipe-materials';
 import { TurbineCurvePanel } from '@/components/TurbineCurvePanel';
