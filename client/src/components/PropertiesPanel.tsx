@@ -314,7 +314,7 @@ export function PropertiesPanel() {
 
     if (isNodeEl) {
       const thisNode = nodes.find(n => n.id === selectedElementId);
-      const elementTypes = new Set(['pump', 'checkValve']);
+      const elementTypes = new Set(['pump', 'checkValve', 'turbine']);
 
       // Block save if new nodeNumber violates ascending order for non-element nodes
       if (thisNode && !elementTypes.has(thisNode.type!)) {
@@ -689,7 +689,7 @@ export function PropertiesPanel() {
             </div>
           )}
 
-          {isNode && (element.data?.type === 'node' || element.data?.type === 'junction' || element.data?.type === 'reservoir' || element.data?.type === 'surgeTank' || element.data?.type === 'flowBoundary' || formData.type_st) && (
+          {isNode && (element.data?.type === 'node' || element.data?.type === 'junction' || element.data?.type === 'reservoir' || element.data?.type === 'surgeTank' || element.data?.type === 'flowBoundary' || element.data?.type === 'turbine' || formData.type_st) && (
             <>
               <div className="grid gap-1">
                 <Label htmlFor="nodeNum">Node Number</Label>

@@ -729,7 +729,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
     // Pumps and check valves are hydraulic elements, not topological nodes.
     // Only real nodes participate in the sequential node-number pool.
-    const realNodeTypes = new Set(['reservoir', 'node', 'junction', 'surgeTank', 'flowBoundary']);
+    const realNodeTypes = new Set(['reservoir', 'node', 'junction', 'surgeTank', 'flowBoundary', 'turbine']);
     const elementTypes = new Set(['pump', 'checkValve']);
 
     // Compute the next gap-free sequential number using only real-node numbers.
@@ -785,6 +785,7 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         initialData = {
           ...initialData,
           label: `T${turbCount}`,
+          nodeNumber: nextNodeNum,
           turbineType: newTcharType,
           syncSpeed: 0,
           wr2: 0,
