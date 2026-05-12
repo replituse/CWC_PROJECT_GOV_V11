@@ -103,7 +103,7 @@ const COLS: Record<FilterKey, ColKey[]> = {
   flowBoundary:['rowNum','unitToggle','label','nodeNum','schedNum','qSchedPairs','comment'],
   pump:        ['rowNum','unitToggle','label','nodeNum','elevation','pumpStatus','pumpType','rq','rhead','rspeed','rtorque','wr2','comment'],
   checkValve:  ['rowNum','unitToggle','label','nodeNum','elevation','valveStatus','valveDiam','comment'],
-  turbine:     ['rowNum','unitToggle','label','nodeNum','elevation','turbineType','syncSpeed','turbWr2','turbFriction','windage','operationMode','vScheduleNum','vSchedulePairs','comment'],
+  turbine:     ['rowNum','unitToggle','label','nodeNum','elevation','turbineType','syncSpeed','turbineDiam','turbWr2','turbFriction','windage','operationMode','vScheduleNum','vSchedulePairs','comment'],
 };
 
 // ─── Pairs editor state ───────────────────────────────────────────────────────
@@ -483,7 +483,7 @@ function ColHeader({ col, unit }: { col: ColKey; unit: UnitSystem }) {
     pumpStatus: 'Status', pumpType: 'PCHAR Type',
     rq: `RQ (${V})`, rhead: `RHEAD (${L})`, rspeed: 'RSPEED (RPM)', rtorque: 'RTOROUE', wr2: 'WR²',
     valveStatus: 'Status', valveDiam: `Diam (${L})`,
-    turbineType: 'TCHAR Type', syncSpeed: 'Sync Speed (RPM)', turbWr2: 'WR²',
+    turbineType: 'TCHAR Type', syncSpeed: 'Sync Speed (RPM)', turbineDiam: `Diameter (${L})`, turbWr2: 'WR²',
     turbFriction: 'Friction', windage: 'Windage', operationMode: 'Mode', vScheduleNum: 'V Sched #',
     vSchedulePairs: 'V Schedule (T/G pairs)',
     comment: 'Comment',
@@ -920,42 +920,50 @@ function RowCells({
     case 'turbineType': return (
       <EditableCell key={col} value={isTurbine ? String(d.turbineType ?? 1) : ''} type="text" inputMode="decimal"
         readOnly={!isTurbine} dimmed={!isTurbine}
-        onChange={v => changeNode('turbineType', v)} testId={`cell-turbtype-${row.id}`} />
+        onChange={v => change('turbineType', v)} testId={`cell-turbtype-${row.id}`} />
     );
     case 'syncSpeed': return (
       <EditableCell key={col} value={isTurbine ? fmt(d.syncSpeed ?? 0) : ''} type="text" inputMode="decimal"
         readOnly={!isTurbine} dimmed={!isTurbine}
-        onChange={v => changeNode('syncSpeed', v)} testId={`cell-syncspeed-${row.id}`} />
+        onChange={v => change('syncSpeed', v)} testId={`cell-syncspeed-${row.id}`} />
+    );
+    case 'turbineDiam': return (
+      <EditableCell key={col} value={isTurbine ? fmt(d.turbineDiameter ?? '') : ''} type="text" inputMode="decimal"
+        readOnly={!isTurbine} dimmed={!isTurbine}
+        onChange={v => change('turbineDiameter', v)} testId={`cell-turbdiam-${row.id}`} />
     );
     case 'turbWr2': return (
       <EditableCell key={col} value={isTurbine ? fmt(d.wr2 ?? 0) : ''} type="text" inputMode="decimal"
         readOnly={!isTurbine} dimmed={!isTurbine}
-        onChange={v => changeNode('wr2', v)} testId={`cell-turbwr2-${row.id}`} />
+        onChange={v => change('wr2', v)} testId={`cell-turbwr2-${row.id}`} />
     );
     case 'turbFriction': return (
       <EditableCell key={col} value={isTurbine ? fmt(d.turbFriction ?? 0) : ''} type="text" inputMode="decimal"
         readOnly={!isTurbine} dimmed={!isTurbine}
-        onChange={v => changeNode('turbFriction', v)} testId={`cell-turbfriction-${row.id}`} />
+        onChange={v => change('turbFriction', v)} testId={`cell-turbfriction-${row.id}`} />
     );
     case 'windage': return (
       <EditableCell key={col} value={isTurbine ? fmt(d.windage ?? 0) : ''} type="text" inputMode="decimal"
         readOnly={!isTurbine} dimmed={!isTurbine}
-        onChange={v => changeNode('windage', v)} testId={`cell-windage-${row.id}`} />
+        onChange={v => change('windage', v)} testId={`cell-windage-${row.id}`} />
     );
     case 'operationMode': return (
       <SelectCell key={col} value={d.operationMode || 'TURBINE'}
-        options={[{label:'TURBINE',value:'TURBINE'},{label:'TURBGOV',value:'TURBGOV'},{label:'EMERGENCY',value:'EMERGENCY'}]}
-        dimmed={!isTurbine} onChange={isTurbine ? v => changeNode('operationMode', v) : undefined} testId={`cell-opmode-${row.id}`} />
+        options={[{label:'TURBINE',value:'TURBINE'},{label:'GENERATE',value:'GENERATE'},{label:'TURBGOV',value:'TURBGOV'},{label:'EMERGENCY',value:'EMERGENCY'}]}
+        dimmed={!isTurbine} onChange={isTurbine ? v => change('operationMode', v) : undefined} testId={`cell-opmode-${row.id}`} />
     );
-    case 'vScheduleNum': return (
-      <EditableCell key={col} value={isTurbine ? String(d.vScheduleNumber ?? 1) : ''} type="text" inputMode="decimal"
-        readOnly={!isTurbine || (d.operationMode !== 'TURBGOV' && d.operationMode !== 'EMERGENCY')}
-        dimmed={!isTurbine || (d.operationMode !== 'TURBGOV' && d.operationMode !== 'EMERGENCY')}
-        onChange={v => changeNode('vScheduleNumber', v)} testId={`cell-vschednum-${row.id}`} />
-    );
+    case 'vScheduleNum': {
+      const needsVSched = d.operationMode === 'GENERATE' || d.operationMode === 'TURBGOV' || d.operationMode === 'EMERGENCY';
+      return (
+        <EditableCell key={col} value={isTurbine ? String(d.vScheduleNumber ?? 1) : ''} type="text" inputMode="decimal"
+          readOnly={!isTurbine || !needsVSched}
+          dimmed={!isTurbine || !needsVSched}
+          onChange={v => change('vScheduleNumber', v)} testId={`cell-vschednum-${row.id}`} />
+      );
+    }
     case 'vSchedulePairs': {
       const opMode = d.operationMode as string;
-      const hasVSched = isTurbine && (opMode === 'TURBGOV' || opMode === 'EMERGENCY');
+      const hasVSched = isTurbine && (opMode === 'GENERATE' || opMode === 'TURBGOV' || opMode === 'EMERGENCY');
       if (!hasVSched) return <NACell key={col} minW="min-w-[150px]" />;
       const schedNum = Number(d.vScheduleNumber ?? 1);
       const pts: { t: number; g: number }[] = vSchedules[schedNum] || [];
@@ -965,7 +973,7 @@ function RowCells({
           key={col}
           pairs={pairs}
           applicable={true}
-          onEdit={() => onOpenPairsEditor(row.id, 'node', 'vSchedule', schedNum)}
+          onEdit={() => onOpenPairsEditor(row.id, row.kind, 'vSchedule', schedNum)}
         />
       );
     }
