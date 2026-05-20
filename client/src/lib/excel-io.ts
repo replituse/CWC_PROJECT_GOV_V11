@@ -9,17 +9,27 @@ export type FilterKey =
 type ColType = 'text' | 'number' | 'boolean' | 'dropdown';
 
 interface ColDef {
-  key: string;          // data field name
-  header: string;       // column header shown in Excel
+  key: string;
+  header: string;
   type: ColType;
-  options?: string[];   // for dropdown columns
-  readOnly?: boolean;   // won't be imported back
+  options?: string[];
+  readOnly?: boolean;
+  isLongList?: boolean; // lists too long for inline formula (>255 chars)
+  width?: number;
 }
 
-// ─── Column Definitions per Tab ───────────────────────────────────────────────
+// ─── Option lists ─────────────────────────────────────────────────────────────
 
+const UNIT_OPTIONS    = ['SI', 'FPS'];
 const PIPE_TYPE_OPTIONS = ['conduit', 'dummy'];
-const PIPE_MATERIAL_OPTIONS = [
+const BC_MODE_OPTIONS = ['fixed', 'schedule'];
+const SURGE_TANK_TYPE_OPTIONS = ['SIMPLE', 'DIFFERENTIAL', 'AIRTANK'];
+const PUMP_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE'];
+const VALVE_STATUS_OPTIONS = ['OPEN', 'CLOSED'];
+const TURBINE_MODE_OPTIONS = ['TURBINE', 'GENERATE', 'TURBGOV', 'EMERGENCY'];
+const BOOL_OPTIONS = ['true', 'false'];
+
+export const PIPE_MATERIAL_OPTIONS = [
   '-- None --',
   'Aluminum','Aluminum structural plate 32 in CR','Aluminum structural plate 32 in CR Historic',
   'Asbestos Cement','Asphalt ditch','Asphalt pavement (rough)','Asphalt pavement (smooth)',
@@ -41,152 +51,166 @@ const PIPE_MATERIAL_OPTIONS = [
   'Stone masonry','Stony bottom','Straw with net','Synthetic mat',
   'Very rough channel, with grass','Wood Stave (new, smooth)','Woven paper net',
 ];
-const BC_MODE_OPTIONS = ['fixed', 'schedule'];
-const SURGE_TANK_TYPE_OPTIONS = ['SIMPLE', 'DIFFERENTIAL', 'AIRTANK'];
-const PUMP_STATUS_OPTIONS = ['ACTIVE', 'INACTIVE'];
-const VALVE_STATUS_OPTIONS = ['OPEN', 'CLOSED'];
-const TURBINE_MODE_OPTIONS = ['TURBINE', 'GENERATE', 'TURBGOV', 'EMERGENCY'];
-const BOOL_OPTIONS = ['true', 'false'];
+
+// ─── Row-number sentinel ───────────────────────────────────────────────────────
+// The '#' column is always first; it is read-only and never imported back.
+
+const ROW_NUM_COL: ColDef = {
+  key: '_rowNum', header: '#', type: 'number', readOnly: true, width: 5,
+};
+
+// ─── Column Definitions per Tab ───────────────────────────────────────────────
 
 export const TAB_COLS: Record<FilterKey, ColDef[]> = {
   all: [
-    { key: 'label',      header: 'Label',          type: 'text' },
-    { key: '_type',      header: 'Type',            type: 'text', readOnly: true },
-    { key: '_unit',      header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'type',       header: 'Pipe Type',       type: 'dropdown', options: PIPE_TYPE_OPTIONS },
-    { key: 'nodeNumber', header: 'Node #',          type: 'number' },
-    { key: 'diameter',   header: 'Diameter',        type: 'number' },
-    { key: 'length',     header: 'Length',          type: 'number' },
-    { key: 'celerity',   header: 'Wave Speed',      type: 'number' },
-    { key: 'friction',   header: 'Friction',        type: 'number' },
-    { key: 'elevation',  header: 'Elevation',       type: 'number' },
-    { key: 'comment',    header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',      header: 'Unit (SI/FPS)', type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',      header: 'Label',         type: 'text', width: 16 },
+    { key: '_type',      header: 'Type',           type: 'text', readOnly: true, width: 14 },
+    { key: 'type',       header: 'Pipe Type',      type: 'dropdown', options: PIPE_TYPE_OPTIONS, width: 14 },
+    { key: 'nodeNumber', header: 'Node #',         type: 'number', width: 10 },
+    { key: 'diameter',   header: 'Diameter',       type: 'number', width: 14 },
+    { key: 'length',     header: 'Length',         type: 'number', width: 14 },
+    { key: 'celerity',   header: 'Wave Speed',     type: 'number', width: 14 },
+    { key: 'friction',   header: 'Friction',       type: 'number', width: 14 },
+    { key: 'elevation',  header: 'Elevation',      type: 'number', width: 14 },
+    { key: 'comment',    header: 'Comment',        type: 'text', width: 24 },
   ],
   conduit: [
-    { key: 'label',              header: 'Label',           type: 'text' },
-    { key: '_unit',              header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'type',               header: 'Pipe Type',       type: 'dropdown', options: PIPE_TYPE_OPTIONS },
-    { key: '_materialLabel',     header: 'Pipe Material',   type: 'dropdown', options: PIPE_MATERIAL_OPTIONS },
-    { key: 'length',             header: 'Length',          type: 'number' },
-    { key: 'diameter',           header: 'Diameter',        type: 'number' },
-    { key: 'celerity',           header: 'Wave Speed',      type: 'number' },
-    { key: 'friction',           header: 'Friction',        type: 'number' },
-    { key: 'manningsN',          header: "Manning's n",     type: 'number' },
-    { key: 'numSegments',        header: 'Segments',        type: 'number' },
-    { key: 'includeNumSegments', header: 'Incl. in INP',   type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'hasAddedLoss',       header: 'Added Loss',      type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'cplus',              header: 'CPLUS',           type: 'number' },
-    { key: 'cminus',             header: 'CMINUS',          type: 'number' },
-    { key: 'pipeE',              header: 'E (Modulus)',     type: 'number' },
-    { key: 'pipeWT',             header: 'WT (Wall Thick)', type: 'number' },
-    { key: 'variable',           header: 'VARIABLE',        type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'distance',           header: 'Distance',        type: 'number' },
-    { key: 'area',               header: 'Area',            type: 'number' },
-    { key: 'comment',            header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',              header: 'Unit (SI/FPS)',   type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',              header: 'Label',           type: 'text', width: 16 },
+    { key: 'type',               header: 'Pipe Type',       type: 'dropdown', options: PIPE_TYPE_OPTIONS, width: 14 },
+    { key: '_materialLabel',     header: 'Pipe Material',   type: 'dropdown', options: PIPE_MATERIAL_OPTIONS, isLongList: true, width: 32 },
+    { key: 'length',             header: 'Length',          type: 'number', width: 14 },
+    { key: 'diameter',           header: 'Diameter',        type: 'number', width: 14 },
+    { key: 'celerity',           header: 'Wave Speed',      type: 'number', width: 14 },
+    { key: 'friction',           header: 'Friction',        type: 'number', width: 14 },
+    { key: 'manningsN',          header: "Manning's n",     type: 'number', width: 14 },
+    { key: 'numSegments',        header: 'Segments',        type: 'number', width: 12 },
+    { key: 'includeNumSegments', header: 'Incl. in INP',   type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
+    { key: 'hasAddedLoss',       header: 'Added Loss',      type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
+    { key: 'cplus',              header: 'CPLUS',           type: 'number', width: 12 },
+    { key: 'cminus',             header: 'CMINUS',          type: 'number', width: 12 },
+    { key: 'pipeE',              header: 'E (Modulus)',     type: 'number', width: 16 },
+    { key: 'pipeWT',             header: 'WT (Wall Thick)', type: 'number', width: 16 },
+    { key: 'variable',           header: 'VARIABLE',        type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
+    { key: 'distance',           header: 'Distance',        type: 'number', width: 14 },
+    { key: 'area',               header: 'Area',            type: 'number', width: 14 },
+    { key: 'comment',            header: 'Comment',         type: 'text', width: 24 },
   ],
   dummy: [
-    { key: 'label',        header: 'Label',           type: 'text' },
-    { key: '_unit',        header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'type',         header: 'Pipe Type',       type: 'dropdown', options: PIPE_TYPE_OPTIONS },
-    { key: 'diameter',     header: 'Diameter',        type: 'number' },
-    { key: 'hasAddedLoss', header: 'Added Loss',      type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'cplus',        header: 'CPLUS',           type: 'number' },
-    { key: 'cminus',       header: 'CMINUS',          type: 'number' },
-    { key: 'comment',      header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',        header: 'Unit (SI/FPS)', type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',        header: 'Label',         type: 'text', width: 16 },
+    { key: 'type',         header: 'Pipe Type',     type: 'dropdown', options: PIPE_TYPE_OPTIONS, width: 14 },
+    { key: 'diameter',     header: 'Diameter',      type: 'number', width: 14 },
+    { key: 'hasAddedLoss', header: 'Added Loss',    type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
+    { key: 'cplus',        header: 'CPLUS',         type: 'number', width: 12 },
+    { key: 'cminus',       header: 'CMINUS',        type: 'number', width: 12 },
+    { key: 'comment',      header: 'Comment',       type: 'text', width: 24 },
   ],
   node: [
-    { key: 'label',      header: 'Label',           type: 'text' },
-    { key: '_type',      header: 'Type',            type: 'text', readOnly: true },
-    { key: '_unit',      header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber', header: 'Node #',          type: 'number' },
-    { key: 'elevation',  header: 'Elevation',       type: 'number' },
-    { key: 'comment',    header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',      header: 'Unit (SI/FPS)', type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',      header: 'Label',         type: 'text', width: 16 },
+    { key: '_type',      header: 'Type',           type: 'text', readOnly: true, width: 14 },
+    { key: 'nodeNumber', header: 'Node #',         type: 'number', width: 10 },
+    { key: 'elevation',  header: 'Elevation',      type: 'number', width: 14 },
+    { key: 'comment',    header: 'Comment',        type: 'text', width: 24 },
   ],
   reservoir: [
-    { key: 'label',              header: 'Label',            type: 'text' },
-    { key: '_unit',              header: 'Unit (SI/FPS)',    type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber',         header: 'Node #',           type: 'number' },
-    { key: 'elevation',          header: 'Elevation',        type: 'number' },
-    { key: 'mode',               header: 'BC Mode',          type: 'dropdown', options: BC_MODE_OPTIONS },
-    { key: 'reservoirElevation', header: 'Res. Elevation',   type: 'number' },
-    { key: 'hScheduleNumber',    header: 'H Sched #',        type: 'number' },
-    { key: 'comment',            header: 'Comment',          type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',              header: 'Unit (SI/FPS)',  type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',              header: 'Label',          type: 'text', width: 16 },
+    { key: 'nodeNumber',         header: 'Node #',         type: 'number', width: 10 },
+    { key: 'elevation',          header: 'Elevation',      type: 'number', width: 14 },
+    { key: 'mode',               header: 'BC Mode',        type: 'dropdown', options: BC_MODE_OPTIONS, width: 16 },
+    { key: 'reservoirElevation', header: 'Res. Elevation', type: 'number', width: 16 },
+    { key: 'hScheduleNumber',    header: 'H Sched #',      type: 'number', width: 12 },
+    { key: 'comment',            header: 'Comment',        type: 'text', width: 24 },
   ],
   junction: [
-    { key: 'label',      header: 'Label',           type: 'text' },
-    { key: '_unit',      header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber', header: 'Node #',          type: 'number' },
-    { key: 'elevation',  header: 'Elevation',       type: 'number' },
-    { key: 'comment',    header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',      header: 'Unit (SI/FPS)', type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',      header: 'Label',         type: 'text', width: 16 },
+    { key: 'nodeNumber', header: 'Node #',         type: 'number', width: 10 },
+    { key: 'elevation',  header: 'Elevation',      type: 'number', width: 14 },
+    { key: 'comment',    header: 'Comment',        type: 'text', width: 24 },
   ],
   surgeTank: [
-    { key: 'label',             header: 'Label',             type: 'text' },
-    { key: '_unit',             header: 'Unit (SI/FPS)',     type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber',        header: 'Node #',            type: 'number' },
-    { key: 'elevation',         header: 'Elevation',         type: 'number' },
-    { key: 'type_st',           header: 'Tank Type',         type: 'dropdown', options: SURGE_TANK_TYPE_OPTIONS },
-    { key: 'tankTop',           header: 'Top Elevation',     type: 'number' },
-    { key: 'tankBottom',        header: 'Bot. Elevation',    type: 'number' },
-    { key: 'initialWaterLevel', header: 'HTANK',             type: 'number' },
-    { key: 'riserDiameter',     header: 'Riser Diameter',    type: 'number' },
-    { key: 'riserTop',          header: 'Riser Top',         type: 'number' },
-    { key: 'hasShape',          header: 'Use SHAPE',         type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'diameter',          header: 'Diameter',          type: 'number' },
-    { key: 'celerity',          header: 'Wave Speed',        type: 'number' },
-    { key: 'friction',          header: 'Friction',          type: 'number' },
-    { key: 'hasAddedLoss',      header: 'Added Loss',        type: 'dropdown', options: BOOL_OPTIONS },
-    { key: 'cplus',             header: 'CPLUS',             type: 'number' },
-    { key: 'cminus',            header: 'CMINUS',            type: 'number' },
-    { key: 'comment',           header: 'Comment',           type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',             header: 'Unit (SI/FPS)',  type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',             header: 'Label',          type: 'text', width: 16 },
+    { key: 'nodeNumber',        header: 'Node #',          type: 'number', width: 10 },
+    { key: 'elevation',         header: 'Elevation',       type: 'number', width: 14 },
+    { key: 'type_st',           header: 'Tank Type',       type: 'dropdown', options: SURGE_TANK_TYPE_OPTIONS, width: 18 },
+    { key: 'tankTop',           header: 'Top Elevation',   type: 'number', width: 14 },
+    { key: 'tankBottom',        header: 'Bot. Elevation',  type: 'number', width: 14 },
+    { key: 'initialWaterLevel', header: 'HTANK',           type: 'number', width: 12 },
+    { key: 'riserDiameter',     header: 'Riser Diameter',  type: 'number', width: 16 },
+    { key: 'riserTop',          header: 'Riser Top',       type: 'number', width: 14 },
+    { key: 'hasShape',          header: 'Use SHAPE',       type: 'dropdown', options: BOOL_OPTIONS, width: 12 },
+    { key: 'diameter',          header: 'Diameter',        type: 'number', width: 14 },
+    { key: 'celerity',          header: 'Wave Speed',      type: 'number', width: 14 },
+    { key: 'friction',          header: 'Friction',        type: 'number', width: 14 },
+    { key: 'hasAddedLoss',      header: 'Added Loss',      type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
+    { key: 'cplus',             header: 'CPLUS',           type: 'number', width: 12 },
+    { key: 'cminus',            header: 'CMINUS',          type: 'number', width: 12 },
+    { key: 'comment',           header: 'Comment',         type: 'text', width: 24 },
   ],
   flowBoundary: [
-    { key: 'label',          header: 'Label',           type: 'text' },
-    { key: '_unit',          header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber',     header: 'Node #',          type: 'number' },
-    { key: 'scheduleNumber', header: 'Q Sched #',       type: 'number' },
-    { key: 'comment',        header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',          header: 'Unit (SI/FPS)', type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',          header: 'Label',         type: 'text', width: 16 },
+    { key: 'nodeNumber',     header: 'Node #',         type: 'number', width: 10 },
+    { key: 'scheduleNumber', header: 'Q Sched #',      type: 'number', width: 12 },
+    { key: 'comment',        header: 'Comment',        type: 'text', width: 24 },
   ],
   pump: [
-    { key: 'label',      header: 'Label',           type: 'text' },
-    { key: '_unit',      header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber', header: 'Node #',          type: 'number' },
-    { key: 'elevation',  header: 'Elevation',       type: 'number' },
-    { key: 'pumpStatus', header: 'Status',          type: 'dropdown', options: PUMP_STATUS_OPTIONS },
-    { key: 'pumpType',   header: 'PCHAR Type #',    type: 'number' },
-    { key: 'rq',         header: 'RQ',              type: 'number' },
-    { key: 'rhead',      header: 'RHEAD',           type: 'number' },
-    { key: 'rspeed',     header: 'RSPEED (RPM)',    type: 'number' },
-    { key: 'rtorque',    header: 'RTORQUE',         type: 'number' },
-    { key: 'wr2',        header: 'WR²',             type: 'number' },
-    { key: 'comment',    header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',      header: 'Unit (SI/FPS)',  type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',      header: 'Label',          type: 'text', width: 16 },
+    { key: 'nodeNumber', header: 'Node #',          type: 'number', width: 10 },
+    { key: 'elevation',  header: 'Elevation',       type: 'number', width: 14 },
+    { key: 'pumpStatus', header: 'Status',          type: 'dropdown', options: PUMP_STATUS_OPTIONS, width: 14 },
+    { key: 'pumpType',   header: 'PCHAR Type #',    type: 'number', width: 14 },
+    { key: 'rq',         header: 'RQ',              type: 'number', width: 12 },
+    { key: 'rhead',      header: 'RHEAD',           type: 'number', width: 12 },
+    { key: 'rspeed',     header: 'RSPEED (RPM)',    type: 'number', width: 14 },
+    { key: 'rtorque',    header: 'RTORQUE',         type: 'number', width: 12 },
+    { key: 'wr2',        header: 'WR2',             type: 'number', width: 12 },
+    { key: 'comment',    header: 'Comment',         type: 'text', width: 24 },
   ],
   checkValve: [
-    { key: 'label',       header: 'Label',           type: 'text' },
-    { key: '_unit',       header: 'Unit (SI/FPS)',   type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber',  header: 'Node #',          type: 'number' },
-    { key: 'elevation',   header: 'Elevation',       type: 'number' },
-    { key: 'valveStatus', header: 'Status',          type: 'dropdown', options: VALVE_STATUS_OPTIONS },
-    { key: 'valveDiam',   header: 'Valve Diameter',  type: 'number' },
-    { key: 'comment',     header: 'Comment',         type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',       header: 'Unit (SI/FPS)',  type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',       header: 'Label',          type: 'text', width: 16 },
+    { key: 'nodeNumber',  header: 'Node #',          type: 'number', width: 10 },
+    { key: 'elevation',   header: 'Elevation',       type: 'number', width: 14 },
+    { key: 'valveStatus', header: 'Status',          type: 'dropdown', options: VALVE_STATUS_OPTIONS, width: 14 },
+    { key: 'valveDiam',   header: 'Valve Diameter',  type: 'number', width: 16 },
+    { key: 'comment',     header: 'Comment',         type: 'text', width: 24 },
   ],
   turbine: [
-    { key: 'label',           header: 'Label',               type: 'text' },
-    { key: '_unit',           header: 'Unit (SI/FPS)',       type: 'dropdown', options: ['SI', 'FPS'] },
-    { key: 'nodeNumber',      header: 'Node #',              type: 'number' },
-    { key: 'elevation',       header: 'Elevation',           type: 'number' },
-    { key: 'turbineType',     header: 'TCHAR Type #',        type: 'number' },
-    { key: 'syncSpeed',       header: 'Sync Speed (RPM)',    type: 'number' },
-    { key: 'turbineDiameter', header: 'Diameter',            type: 'number' },
-    { key: 'wr2',             header: 'WR²',                 type: 'number' },
-    { key: 'turbFriction',    header: 'Friction',            type: 'number' },
-    { key: 'windage',         header: 'Windage',             type: 'number' },
-    { key: 'operationMode',   header: 'Mode',                type: 'dropdown', options: TURBINE_MODE_OPTIONS },
-    { key: 'vScheduleNumber', header: 'V Sched #',           type: 'number' },
-    { key: 'comment',         header: 'Comment',             type: 'text' },
+    ROW_NUM_COL,
+    { key: '_unit',           header: 'Unit (SI/FPS)',     type: 'dropdown', options: UNIT_OPTIONS, width: 14 },
+    { key: 'label',           header: 'Label',             type: 'text', width: 16 },
+    { key: 'nodeNumber',      header: 'Node #',             type: 'number', width: 10 },
+    { key: 'elevation',       header: 'Elevation',          type: 'number', width: 14 },
+    { key: 'turbineType',     header: 'TCHAR Type #',       type: 'number', width: 14 },
+    { key: 'syncSpeed',       header: 'Sync Speed (RPM)',   type: 'number', width: 18 },
+    { key: 'turbineDiameter', header: 'Diameter',           type: 'number', width: 14 },
+    { key: 'wr2',             header: 'WR2',                type: 'number', width: 12 },
+    { key: 'turbFriction',    header: 'Friction',           type: 'number', width: 14 },
+    { key: 'windage',         header: 'Windage',            type: 'number', width: 12 },
+    { key: 'operationMode',   header: 'Mode',               type: 'dropdown', options: TURBINE_MODE_OPTIONS, width: 16 },
+    { key: 'vScheduleNumber', header: 'V Sched #',          type: 'number', width: 12 },
+    { key: 'comment',         header: 'Comment',            type: 'text', width: 24 },
   ],
 };
 
-// ─── Material label ↔ id helpers ─────────────────────────────────────────────
+// ─── Material helpers ─────────────────────────────────────────────────────────
 
 import { PIPE_MATERIALS, PIPE_MATERIALS_BY_ID } from './pipe-materials';
 
@@ -202,41 +226,66 @@ function materialIdByLabel(label: string): number | undefined {
   return m?.id;
 }
 
-// ─── Row value extractor ──────────────────────────────────────────────────────
+// ─── Cell value extractor ─────────────────────────────────────────────────────
 
-function getRowValue(col: ColDef, data: Record<string, any>, kind: 'edge' | 'node', subType: string, globalUnit: string): string | number {
+function getRowValue(
+  col: ColDef,
+  data: Record<string, any>,
+  subType: string,
+  globalUnit: string,
+  rowIdx: number,
+): string | number {
+  if (col.key === '_rowNum') return rowIdx + 1;
   if (col.key === '_type') {
-    const TYPE_LABELS: Record<string, string> = {
+    const LABELS: Record<string, string> = {
       reservoir: 'Reservoir', node: 'Node', junction: 'Junction',
       surgeTank: 'Surge Tank', flowBoundary: 'Flow BC',
       pump: 'Pump', checkValve: 'Check Valve', turbine: 'Turbine',
       conduit: 'Conduit', dummy: 'Dummy Pipe',
     };
-    return TYPE_LABELS[subType] ?? subType;
+    return LABELS[subType] ?? subType;
   }
-  if (col.key === '_unit') {
-    return (data.unit as string) || globalUnit;
-  }
-  if (col.key === '_materialLabel') {
-    return materialLabelById(data.materialId);
-  }
+  if (col.key === '_unit') return (data.unit as string) || globalUnit;
+  if (col.key === '_materialLabel') return materialLabelById(data.materialId);
   const val = data[col.key];
   if (val === undefined || val === null) return '';
   if (typeof val === 'boolean') return val ? 'true' : 'false';
   return val as string | number;
 }
 
-// ─── Excel colour constants ───────────────────────────────────────────────────
+// ─── Styling constants ────────────────────────────────────────────────────────
 
 const HEADER_FILL: ExcelJS.Fill = {
   type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1A73E8' },
 };
-const DROPDOWN_FILL: ExcelJS.Fill = {
+const ROWNUM_FILL: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1557B0' },
+};
+const READONLY_FILL_EVEN: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF0F0F0' },
+};
+const READONLY_FILL_ODD: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8E8E8' },
+};
+const DROPDOWN_FILL_EVEN: ExcelJS.Fill = {
   type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFEEF4FF' },
 };
+const DROPDOWN_FILL_ODD: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE4EDFF' },
+};
+const NORMAL_FILL_EVEN: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFFFF' },
+};
+const NORMAL_FILL_ODD: ExcelJS.Fill = {
+  type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFF' },
+};
 const HEADER_FONT: Partial<ExcelJS.Font> = { bold: true, color: { argb: 'FFFFFFFF' }, size: 10 };
+const CELL_BORDER: Partial<ExcelJS.Borders> = {
+  bottom: { style: 'hair', color: { argb: 'FFD1D5DB' } },
+  right: { style: 'hair', color: { argb: 'FFD1D5DB' } },
+};
 
-// ─── Export ──────────────────────────────────────────────────────────────────
+// ─── Export ───────────────────────────────────────────────────────────────────
 
 export interface ExportRow {
   id: string;
@@ -258,90 +307,195 @@ export async function exportTabToExcel(
   wb.creator = 'WHAMO Network Designer';
   wb.created = new Date();
 
+  // ── Hidden "Lists" sheet for long dropdowns (e.g. Pipe Material, 63 items) ──
+  const longListCols = cols.filter(c => c.isLongList && c.options);
+  const listsWs = wb.addWorksheet('_Lists');
+  listsWs.state = 'hidden';
+
+  // One column per long-list field; header = col key (used to build the formula ref)
+  const listRanges: Record<string, string> = {};
+  longListCols.forEach((col, i) => {
+    const colLetter = String.fromCharCode(65 + i); // A, B, C…
+    if (col.options) {
+      col.options.forEach((opt, r) => {
+        listsWs.getCell(`${colLetter}${r + 1}`).value = opt;
+      });
+      listRanges[col.key] = `_Lists!$${colLetter}$1:$${colLetter}$${col.options.length}`;
+    }
+  });
+
+  // ── Main data sheet ──
   const ws = wb.addWorksheet(tabLabel, {
     views: [{ state: 'frozen', ySplit: 1 }],
   });
 
-  // ── Set column widths and headers ──
+  // Set column definitions
   ws.columns = cols.map(col => ({
     header: col.header,
     key: col.key,
-    width: Math.max(16, col.header.length + 4),
+    width: col.width ?? Math.max(12, col.header.length + 4),
   }));
 
   // Style header row
   const headerRow = ws.getRow(1);
-  headerRow.eachCell(cell => {
-    cell.fill = HEADER_FILL;
-    cell.font = HEADER_FONT;
-    cell.alignment = { vertical: 'middle', horizontal: 'left' };
-    cell.border = {
-      bottom: { style: 'thin', color: { argb: 'FF1557B0' } },
-    };
+  headerRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+    const colDef = cols[colNumber - 1];
+    cell.fill = colDef?.key === '_rowNum' ? ROWNUM_FILL : HEADER_FILL;
+    cell.font = { ...HEADER_FONT, size: colDef?.key === '_rowNum' ? 9 : 10 };
+    cell.alignment = { vertical: 'middle', horizontal: colDef?.key === '_rowNum' ? 'center' : 'left' };
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FF1044A0' } } };
   });
-  headerRow.height = 20;
+  headerRow.height = 22;
 
-  // ── Add data rows ──
+  // Add a second "sub-header" hint row (light gray, italic)
+  const hintRow = ws.addRow(cols.map(col => {
+    if (col.key === '_rowNum') return '';
+    if (col.readOnly) return '(read-only)';
+    if (col.type === 'dropdown') return '▼ dropdown';
+    if (col.type === 'number') return '123 numeric';
+    return 'text';
+  }));
+  hintRow.eachCell({ includeEmpty: true }, cell => {
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5FB' } };
+    cell.font = { italic: true, color: { argb: 'FF8899BB' }, size: 8 };
+    cell.alignment = { vertical: 'middle', horizontal: 'left' };
+    cell.border = { bottom: { style: 'thin', color: { argb: 'FFCCD5E8' } } };
+  });
+  hintRow.height = 14;
+
+  // ── Data rows (start at Excel row 3 because of hint row) ──
   rows.forEach((row, rowIdx) => {
-    const excelRowNum = rowIdx + 2;
+    const isEven = rowIdx % 2 === 0;
     const values: (string | number)[] = cols.map(col =>
-      getRowValue(col, row.data, row.kind, row.subType, globalUnit)
+      getRowValue(col, row.data, row.subType, globalUnit, rowIdx)
     );
     const excelRow = ws.addRow(values);
 
-    // Alternate row shading
-    const bgColor = rowIdx % 2 === 0 ? 'FFFFFFFF' : 'FFF8FAFF';
     excelRow.eachCell({ includeEmpty: true }, (cell, colNumber) => {
       const colDef = cols[colNumber - 1];
       if (!colDef) return;
-      const isReadOnly = colDef.readOnly;
-      cell.fill = {
-        type: 'pattern', pattern: 'solid',
-        fgColor: { argb: colDef.type === 'dropdown' && !isReadOnly ? 'FFEEF4FF' : bgColor },
-      };
-      cell.font = { size: 10, color: { argb: isReadOnly ? 'FF888888' : 'FF1A1A2E' } };
-      cell.border = {
-        bottom: { style: 'hair', color: { argb: 'FFD1D5DB' } },
-        right: { style: 'hair', color: { argb: 'FFD1D5DB' } },
-      };
-      cell.alignment = { vertical: 'middle' };
 
-      // Add dropdown validation
-      if (colDef.type === 'dropdown' && colDef.options && !isReadOnly) {
-        const formulaList = '"' + colDef.options.join(',') + '"';
+      const isReadOnly = !!colDef.readOnly;
+      const isRowNum = colDef.key === '_rowNum';
+      const isDropdown = colDef.type === 'dropdown' && !isReadOnly;
+      const isNumeric = colDef.type === 'number' && !isReadOnly;
+
+      // Fill colour
+      if (isRowNum) {
+        cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: isEven ? 'FFE8F0FE' : 'FFD2E3FC' } };
+      } else if (isReadOnly) {
+        cell.fill = isEven ? READONLY_FILL_EVEN : READONLY_FILL_ODD;
+      } else if (isDropdown) {
+        cell.fill = isEven ? DROPDOWN_FILL_EVEN : DROPDOWN_FILL_ODD;
+      } else {
+        cell.fill = isEven ? NORMAL_FILL_EVEN : NORMAL_FILL_ODD;
+      }
+
+      // Font
+      cell.font = {
+        size: 10,
+        color: { argb: isReadOnly ? 'FF888888' : 'FF1A1A2E' },
+        bold: isRowNum,
+      };
+
+      // Alignment
+      cell.alignment = {
+        vertical: 'middle',
+        horizontal: isRowNum || isNumeric ? 'center' : 'left',
+      };
+
+      cell.border = isRowNum
+        ? { ...CELL_BORDER, right: { style: 'medium', color: { argb: 'FF1A73E8' } } }
+        : CELL_BORDER;
+
+      // ── Data validation ──
+
+      // Dropdown: long list → reference sheet range; short list → inline formula
+      if (isDropdown && colDef.options) {
+        if (colDef.isLongList && listRanges[colDef.key]) {
+          cell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: [listRanges[colDef.key]],
+            error: 'Please select a value from the list.',
+            errorTitle: 'Invalid Value',
+            showErrorMessage: true,
+          };
+        } else {
+          const formulaList = '"' + colDef.options.join(',') + '"';
+          cell.dataValidation = {
+            type: 'list',
+            allowBlank: true,
+            formulae: [formulaList],
+            error: 'Please select a valid option.',
+            errorTitle: 'Invalid Value',
+            showErrorMessage: true,
+          };
+        }
+      }
+
+      // Number: decimal validation — rejects letters
+      if (isNumeric) {
         cell.dataValidation = {
-          type: 'list',
+          type: 'decimal',
+          operator: 'between',
           allowBlank: true,
-          formulae: [formulaList],
-          showDropDown: false,
-          error: 'Please select a value from the list.',
-          errorTitle: 'Invalid Value',
+          formulae: [-1e15, 1e15],
+          error: 'This field only accepts numeric values. Please enter a number.',
+          errorTitle: 'Numbers Only',
           showErrorMessage: true,
         };
       }
+
+      // Protect read-only cells with a light lock appearance
+      if (isReadOnly && !isRowNum) {
+        cell.protection = { locked: true };
+      }
     });
+
     excelRow.height = 18;
   });
 
-  // ── Add a "Legend" sheet with field descriptions ──
+  // ── Legend sheet ──
   const legendWs = wb.addWorksheet('Legend (do not edit)');
   legendWs.columns = [
     { header: 'Column', key: 'col', width: 28 },
-    { header: 'Description', key: 'desc', width: 45 },
-    { header: 'Allowed Values', key: 'vals', width: 50 },
+    { header: 'Field Type', key: 'type', width: 16 },
+    { header: 'Allowed Values / Notes', key: 'vals', width: 60 },
   ];
   const legendHeader = legendWs.getRow(1);
   legendHeader.eachCell(cell => {
     cell.fill = HEADER_FILL;
     cell.font = HEADER_FONT;
+    cell.alignment = { vertical: 'middle' };
   });
   legendHeader.height = 20;
+
   cols.forEach(col => {
-    legendWs.addRow({
+    const row = legendWs.addRow({
       col: col.header,
-      desc: col.readOnly ? '(read-only, do not edit)' : col.type === 'dropdown' ? 'Select from dropdown' : col.type,
-      vals: col.options ? col.options.join(', ') : col.type === 'number' ? 'Numeric value' : 'Free text',
+      type: col.readOnly ? 'Read-only'
+          : col.type === 'dropdown' ? 'Dropdown'
+          : col.type === 'number'   ? 'Number (decimal)'
+          : 'Text',
+      vals: col.readOnly
+          ? 'Do not edit — informational only'
+          : col.options
+          ? col.options.slice(0, 10).join(', ') + (col.options.length > 10 ? ` … (${col.options.length} total)` : '')
+          : col.type === 'number'
+          ? 'Any numeric value (integers or decimals)'
+          : 'Free text',
     });
+    row.getCell('type').fill = col.readOnly
+      ? READONLY_FILL_EVEN
+      : col.type === 'dropdown'
+      ? DROPDOWN_FILL_EVEN
+      : NORMAL_FILL_EVEN;
+    row.eachCell(cell => {
+      cell.font = { size: 10 };
+      cell.border = CELL_BORDER;
+    });
+    row.height = 16;
   });
 
   // ── Download ──
@@ -378,11 +532,13 @@ export async function importTabFromExcel(
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(buffer);
 
-  // Find the first non-legend sheet
-  const ws = wb.worksheets.find(s => !s.name.toLowerCase().includes('legend'));
+  // Find the first visible, non-legend, non-list sheet
+  const ws = wb.worksheets.find(
+    s => !s.name.startsWith('_') && !s.name.toLowerCase().includes('legend')
+  );
   if (!ws) throw new Error('No data sheet found in workbook.');
 
-  // Read header row to build column index
+  // Read header row (row 1) to build column index map
   const headerRow = ws.getRow(1);
   const headerMap: Record<string, number> = {};
   headerRow.eachCell((cell, colNum) => {
@@ -390,7 +546,7 @@ export async function importTabFromExcel(
     if (val) headerMap[val] = colNum;
   });
 
-  // Build a lookup from label → ExportRow
+  // Build label → ExportRow lookup
   const labelLookup = new Map<string, ExportRow>();
   for (const row of rows) {
     const lbl = String(row.data.label ?? '').trim();
@@ -401,13 +557,12 @@ export async function importTabFromExcel(
   let skipped = 0;
   let matched = 0;
 
-  // Find label column index
-  const labelColDef = cols.find(c => c.key === 'label');
-  const labelHeader = labelColDef?.header ?? 'Label';
+  const labelHeader = 'Label';
   const labelColNum = headerMap[labelHeader];
 
   ws.eachRow((excelRow, rowNum) => {
-    if (rowNum === 1) return; // skip header
+    // Skip header row (1) and hint row (2)
+    if (rowNum <= 2) return;
 
     const labelCell = labelColNum ? excelRow.getCell(labelColNum) : null;
     const labelVal = String(labelCell?.value ?? '').trim();
@@ -420,6 +575,7 @@ export async function importTabFromExcel(
     const update: Record<string, any> = {};
 
     cols.forEach(col => {
+      // Skip read-only cols and label (used only for matching)
       if (col.readOnly || col.key === 'label') return;
       const colNum = headerMap[col.header];
       if (!colNum) return;
@@ -433,6 +589,7 @@ export async function importTabFromExcel(
         if (strVal === 'SI' || strVal === 'FPS') update.unit = strVal;
         return;
       }
+
       if (col.key === '_materialLabel') {
         const matId = materialIdByLabel(strVal);
         if (matId !== undefined) {
@@ -449,14 +606,15 @@ export async function importTabFromExcel(
         }
         return;
       }
+
       if (col.type === 'number') {
         const num = parseFloat(strVal);
         if (!isNaN(num)) update[col.key] = num;
         return;
       }
+
       if (col.type === 'dropdown' || col.type === 'text') {
-        // Handle boolean fields stored as dropdown
-        if (col.options && (col.options[0] === 'true' || col.options[0] === 'false')) {
+        if (col.options && (col.options[0] === 'true' || col.options[1] === 'false')) {
           update[col.key] = strVal === 'true';
           return;
         }
