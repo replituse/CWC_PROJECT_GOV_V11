@@ -1232,6 +1232,18 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
         update.friction = parseFloat(((K * n * n) / Math.pow(diam, 1 / 3)).toFixed(6));
       }
     }
+    // When E, WT, or diameter is edited, recompute wave speed (celerity) if all three are present
+    if (field === 'pipeE' || field === 'pipeWT' || field === 'diameter') {
+      const elemUnit: UnitSystem = (currentData?.unit as UnitSystem) || globalUnit;
+      const C0 = elemUnit === 'SI' ? 1440 : 4720;
+      const Kw = elemUnit === 'SI' ? 2.07e9 : 3e5;
+      const E  = field === 'pipeE'     ? (parseFloat(rawStr) || 0) : (parseFloat(currentData?.pipeE)  || 0);
+      const WT = field === 'pipeWT'    ? (parseFloat(rawStr) || 0) : (parseFloat(currentData?.pipeWT) || 0);
+      const D  = field === 'diameter'  ? (parseFloat(rawStr) || 0) : (parseFloat(currentData?.diameter) || 0);
+      if (E > 0 && WT > 0 && D > 0) {
+        update.celerity = parseFloat((C0 / Math.sqrt(1 + (Kw / E) * (D / WT))).toFixed(4));
+      }
+    }
     updateEdgeData(id, update);
   }, [globalUnit, updateEdgeData]);
 
