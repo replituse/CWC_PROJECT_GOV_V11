@@ -396,6 +396,7 @@ export function PropertiesPanel() {
       }
       updateNodeData(selectedElementId, processedData);
     } else {
+      updateEdgeData(selectedElementId, processedData);
       const currentLabel = (processedData.label as string) || '';
       const duplicates = currentLabel
         ? edges.filter(e =>
@@ -405,16 +406,18 @@ export function PropertiesPanel() {
           )
         : [];
 
+      duplicates.forEach(e => updateEdgeData(e.id, processedData));
+
+      setIsDirty(false);
       if (duplicates.length > 0) {
         toast({
-          variant: "destructive",
-          title: "Duplicate Conduit Number",
-          description: `Conduit label "${currentLabel}" is already assigned to ${duplicates.length === 1 ? 'another conduit' : `${duplicates.length} other conduits`}. Each conduit should have a unique label.`,
+          title: "Duplicate Conduit Label",
+          description: `Label "${currentLabel}" is already used by ${duplicates.length === 1 ? '1 other conduit' : `${duplicates.length} other conduits`}. Saved anyway.`,
         });
-        return;
+      } else {
+        toast({ variant: "success", title: "Saved", description: "Changes saved successfully." });
       }
-
-      updateEdgeData(selectedElementId, processedData);
+      return;
     }
 
     setIsDirty(false);
