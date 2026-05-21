@@ -11,35 +11,35 @@ import { useNetworkStore } from '@/lib/store';
 function PumpIcon({ color, label }: { color: string; label?: string }) {
   return (
     <div style={{
-      width: 28, height: 28, borderRadius: '50%',
+      width: 36, height: 36, borderRadius: '50%',
       border: `2px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontSize: 8, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
     </div>
   );
 }
 
-function CheckValveIcon({ color }: { color: string }) {
+function CheckValveIcon({ color, label }: { color: string; label?: string }) {
   return (
-    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
-      <circle cx="11" cy="11" r="10" fill="white" stroke={color} strokeWidth="1.5" />
-      <line x1="11" y1="5" x2="11" y2="17" stroke={color} strokeWidth="2" strokeLinecap="round" />
-      <polygon points="11,6 17,11 11,16" fill={color} opacity="0.5" />
-      <line x1="5" y1="8" x2="11" y2="11" stroke={color} strokeWidth="1.5" />
-      <line x1="5" y1="14" x2="11" y2="11" stroke={color} strokeWidth="1.5" />
-    </svg>
+    <div style={{
+      width: 36, height: 36, borderRadius: '50%',
+      border: `2px solid ${color}`, background: 'white',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+    }}>
+      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+    </div>
   );
 }
 
 function TurbineIcon({ color, label }: { color: string; label?: string }) {
   return (
     <div style={{
-      width: 28, height: 28, borderRadius: '50%',
+      width: 36, height: 36, borderRadius: '50%',
       border: `2px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontSize: 8, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
     </div>
   );
 }
@@ -116,17 +116,7 @@ export const ConnectionEdge = memo(({
             {isElementEdge ? (
               <div className="flex flex-col items-center gap-0.5 cursor-help">
                 {isPump && <PumpIcon color={strokeColor} label={(displayData?.label as string) || id} />}
-                {isCheckValve && (
-                  <>
-                    <CheckValveIcon color={strokeColor} />
-                    <div
-                      className="px-1 py-0 rounded text-[8px] font-bold shadow-sm"
-                      style={{ background: 'white', color: strokeColor, border: `1px solid ${strokeColor}` }}
-                    >
-                      {(displayData?.label as ReactNode) || id}
-                    </div>
-                  </>
-                )}
+                {isCheckValve && <CheckValveIcon color={strokeColor} label={(displayData?.label as string) || id} />}
                 {isTurbine && <TurbineIcon color={strokeColor} label={(displayData?.label as string) || id} />}
               </div>
             ) : (
