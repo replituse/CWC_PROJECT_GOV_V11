@@ -15,7 +15,7 @@ function PumpIcon({ color, label }: { color: string; label?: string }) {
       border: `2px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#000', lineHeight: 1 }}>{label}</span>
     </div>
   );
 }
@@ -27,7 +27,7 @@ function CheckValveIcon({ color, label }: { color: string; label?: string }) {
       border: `2px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#000', lineHeight: 1 }}>{label}</span>
     </div>
   );
 }
@@ -39,7 +39,7 @@ function TurbineIcon({ color, label }: { color: string; label?: string }) {
       border: `2px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color, lineHeight: 1 }}>{label}</span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: '#000', lineHeight: 1 }}>{label}</span>
     </div>
   );
 }
@@ -120,7 +120,7 @@ export const ConnectionEdge = memo(({
                 {isTurbine && <TurbineIcon color={strokeColor} label={(displayData?.label as string) || id} />}
               </div>
             ) : (
-              <div className="bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded border border-slate-200 shadow-sm text-[9px] font-bold cursor-help hover:bg-white transition-colors">
+              <div className="bg-white px-2 py-0.5 rounded-full border border-black text-[10px] font-semibold text-black cursor-help hover:bg-slate-50 transition-colors">
                 {(displayData?.label as ReactNode) || id}
               </div>
             )}
