@@ -64,6 +64,16 @@ import windIcon from "@assets/wind_1779523398812.png";
 import waterPumpIcon from "@assets/water-pump_1779523451215.png";
 import pipeIcon from "@assets/pipe_1779523475650.png";
 import turbineImgIcon from "@assets/turbine_1779523517554.png";
+import networkIcon from "@assets/network_1779525899254.png";
+import clickIcon from "@assets/click_1779525969230.png";
+import tabletIcon from "@assets/tablet_1779526000997.png";
+import chartIcon from "@assets/chart_1779526062244.png";
+import equalizerIcon from "@assets/equalizer_(1)_1779526283421.png";
+import settingsWrenchIcon from "@assets/settings_1779526312036.png";
+import inputIcon from "@assets/input_1779526391855.png";
+import outputIcon from "@assets/output_1779526416694.png";
+import gridIcon from "@assets/grid_1779526458342.png";
+import fullscreenIcon from "@assets/fullscreen_1779526488758.png";
 
 // ─── Title bar compact button ─────────────────────────────────────────────────
 function TitleBarBtn({
@@ -191,11 +201,11 @@ function RibbonGroup({ label, children }: { label: string; children: React.React
   return (
     <div className="flex items-stretch flex-1">
       <div className="flex flex-col flex-1">
-        <div className="flex items-center justify-center gap-1 px-2 pt-1.5 pb-1 flex-1">
-          {children}
-        </div>
-        <div className="text-center pb-1">
+        <div className="text-center pt-1 pb-0.5">
           <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase" style={{ fontFamily: 'Poppins, sans-serif' }}>{label}</span>
+        </div>
+        <div className="flex items-center justify-center gap-1 px-2 pb-1.5 pt-0.5 flex-1">
+          {children}
         </div>
       </div>
       <div className="w-px bg-slate-200 my-1 self-stretch flex-shrink-0" />
@@ -533,20 +543,20 @@ export function Header({
         </RibbonGroup>
 
         <RibbonGroup label="Tools">
-          <InlineRibbonBtn icon={<Layout className="w-5 h-5" />} label="Diagram" onClick={onShowDiagram} />
+          <InlineRibbonBtn imgSrc={networkIcon} label="Diagram" onClick={onShowDiagram} />
           <InlineRibbonBtn
-            icon={<MousePointer2 className="w-5 h-5" />}
+            imgSrc={clickIcon}
             label="Node Sel."
             onClick={() => window.dispatchEvent(new CustomEvent('toggleNodeSelection'))}
           />
           <InlineRibbonBtn
-            icon={<Table2 className="w-5 h-5" />}
+            imgSrc={tabletIcon}
             label="Flex Table"
             onClick={() => setShowFlexTable(true)}
             data-testid="ribbon-btn-flextable"
           />
           <InlineRibbonBtn
-            icon={<BarChart2 className="w-5 h-5" />}
+            imgSrc={chartIcon}
             label="Visualization"
             onClick={onVisualization}
             data-testid="ribbon-btn-visualization"
@@ -555,12 +565,12 @@ export function Header({
 
         <RibbonGroup label="Analysis">
           <InlineRibbonBtn
-            icon={<Settings2 className="w-5 h-5" />}
+            imgSrc={settingsWrenchIcon}
             label="Comp. Params"
             onClick={() => setShowCompParams(true)}
           />
           <InlineRibbonBtn
-            icon={<ListVideo className="w-5 h-5" />}
+            imgSrc={equalizerIcon}
             label="Output Req."
             onClick={() => { setGenerateDialogMode(null); setShowOutputDialog(true); }}
           />
@@ -568,13 +578,13 @@ export function Header({
 
         <RibbonGroup label="Generate">
           <InlineRibbonBtn
-            icon={<Download className="w-5 h-5 text-blue-700" />}
+            imgSrc={inputIcon}
             label="Generate .INP"
             onClick={handleExport}
             data-testid="ribbon-btn-generate-inp"
           />
           <InlineRibbonBtn
-            icon={<Download className="w-5 h-5 text-blue-700" />}
+            imgSrc={outputIcon}
             label={isGeneratingOut ? "Processing..." : "Generate .OUT"}
             onClick={handleOutGenerate}
             disabled={isGeneratingOut}
@@ -584,12 +594,12 @@ export function Header({
 
         <RibbonGroup label="View">
           <InlineRibbonBtn
-            icon={<Layout className="w-5 h-5" />}
+            imgSrc={gridIcon}
             label="Grid"
             onClick={() => window.dispatchEvent(new CustomEvent('toggle-grid'))}
           />
           <InlineRibbonBtn
-            icon={<Maximize2 className="w-5 h-5" />}
+            imgSrc={fullscreenIcon}
             label={isFullscreen ? "Exit FS" : "Full Screen"}
             onClick={() => {
               if (!document.fullscreenElement) {
@@ -598,22 +608,6 @@ export function Header({
                 document.exitFullscreen();
               }
             }}
-          />
-          <InlineRibbonBtn
-            icon={showHoverData ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
-            label={showHoverData ? "Hide Labels" : "Show Labels"}
-            onClick={() => setShowHoverData(!showHoverData)}
-            active={showHoverData}
-            data-testid="ribbon-btn-toggle-labels"
-          />
-        </RibbonGroup>
-
-        <RibbonGroup label="Help">
-          <InlineRibbonBtn icon={<Info className="w-5 h-5" />} label="Help" onClick={() => setShowHelp(true)} />
-          <InlineRibbonBtn
-            icon={<Layout className="w-5 h-5" />}
-            label="Shortcuts"
-            onClick={() => window.dispatchEvent(new CustomEvent('toggle-shortcut-console'))}
           />
         </RibbonGroup>
 
