@@ -624,123 +624,129 @@ export function Header({
 
       </div>
 
-      {/* ── COMPUTATION PARAMETERS DIALOG ── */}
-      <Dialog open={showCompParams} onOpenChange={setShowCompParams}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Computational Parameters</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-6 py-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <Label className="text-sm font-semibold">Time Stages</Label>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-8"
-                  onClick={() => {
-                    const newStages = [...computationalParams.stages, { dtcomp: 0.01, dtout: 0.1, tmax: 100 }];
-                    updateComputationalParams({ stages: newStages });
-                  }}
-                >
-                  Add Stage
-                </Button>
-              </div>
-              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                {computationalParams.stages.map((stage, index) => (
-                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-md bg-muted/20 relative group">
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-[10px]">DTCOMP</Label>
-                      <Input
-                        type="text" inputMode="decimal"
-                        step="0.001"
-                        className="h-8 text-xs"
-                        value={stage.dtcomp}
-                        onChange={e => {
-                          const newStages = [...computationalParams.stages];
-                          newStages[index] = { ...stage, dtcomp: parseFloat(e.target.value) || 0 };
-                          updateComputationalParams({ stages: newStages });
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-3 space-y-1">
-                      <Label className="text-[10px]">DTOUT</Label>
-                      <Input
-                        type="text" inputMode="decimal"
-                        step="0.01"
-                        className="h-8 text-xs"
-                        value={stage.dtout}
-                        onChange={e => {
-                          const newStages = [...computationalParams.stages];
-                          newStages[index] = { ...stage, dtout: parseFloat(e.target.value) || 0 };
-                          updateComputationalParams({ stages: newStages });
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-4 space-y-1">
-                      <Label className="text-[10px]">TMAX</Label>
-                      <Input
-                        type="text" inputMode="decimal"
-                        className="h-8 text-xs"
-                        value={stage.tmax}
-                        onChange={e => {
-                          const newStages = [...computationalParams.stages];
-                          newStages[index] = { ...stage, tmax: parseFloat(e.target.value) || 0 };
-                          updateComputationalParams({ stages: newStages });
-                        }}
-                      />
-                    </div>
-                    <div className="col-span-2 pb-0.5">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                        disabled={computationalParams.stages.length === 1}
-                        onClick={() => {
-                          const newStages = computationalParams.stages.filter((_, i) => i !== index);
-                          updateComputationalParams({ stages: newStages });
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+      {/* ── COMPUTATION PARAMETERS SIDEBAR ── */}
+      {showCompParams && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div className="absolute inset-0 bg-black/30 pointer-events-auto" onClick={() => setShowCompParams(false)} />
+          <div className="absolute right-0 top-0 h-full w-[420px] bg-white shadow-2xl border-l border-slate-200 flex flex-col pointer-events-auto animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Computational Parameters</h2>
+              <button onClick={() => setShowCompParams(false)} className="p-1 rounded hover:bg-slate-200 transition-colors">
+                <X className="w-4 h-4 text-slate-500" />
+              </button>
             </div>
-            <Separator />
-            <div className="space-y-4">
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="includeAccutest-ribbon"
-                  checked={computationalParams.includeAccutest !== false}
-                  onCheckedChange={(checked) => updateComputationalParams({ includeAccutest: !!checked })}
-                />
-                <Label htmlFor="includeAccutest-ribbon" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                  Include ACCUTEST in .INP
-                </Label>
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-semibold">Time Stages</Label>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8"
+                    onClick={() => {
+                      const newStages = [...computationalParams.stages, { dtcomp: 0.01, dtout: 0.1, tmax: 100 }];
+                      updateComputationalParams({ stages: newStages });
+                    }}
+                  >
+                    Add Stage
+                  </Button>
+                </div>
+                <div className="space-y-3">
+                  {computationalParams.stages.map((stage, index) => (
+                    <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-md bg-muted/20 relative group">
+                      <div className="col-span-3 space-y-1">
+                        <Label className="text-[10px]">DTCOMP</Label>
+                        <Input
+                          type="text" inputMode="decimal"
+                          step="0.001"
+                          className="h-8 text-xs"
+                          value={stage.dtcomp}
+                          onChange={e => {
+                            const newStages = [...computationalParams.stages];
+                            newStages[index] = { ...stage, dtcomp: parseFloat(e.target.value) || 0 };
+                            updateComputationalParams({ stages: newStages });
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-3 space-y-1">
+                        <Label className="text-[10px]">DTOUT</Label>
+                        <Input
+                          type="text" inputMode="decimal"
+                          step="0.01"
+                          className="h-8 text-xs"
+                          value={stage.dtout}
+                          onChange={e => {
+                            const newStages = [...computationalParams.stages];
+                            newStages[index] = { ...stage, dtout: parseFloat(e.target.value) || 0 };
+                            updateComputationalParams({ stages: newStages });
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-4 space-y-1">
+                        <Label className="text-[10px]">TMAX</Label>
+                        <Input
+                          type="text" inputMode="decimal"
+                          className="h-8 text-xs"
+                          value={stage.tmax}
+                          onChange={e => {
+                            const newStages = [...computationalParams.stages];
+                            newStages[index] = { ...stage, tmax: parseFloat(e.target.value) || 0 };
+                            updateComputationalParams({ stages: newStages });
+                          }}
+                        />
+                      </div>
+                      <div className="col-span-2 pb-0.5">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                          disabled={computationalParams.stages.length === 1}
+                          onClick={() => {
+                            const newStages = computationalParams.stages.filter((_, i) => i !== index);
+                            updateComputationalParams({ stages: newStages });
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-2" data-disabled={computationalParams.includeAccutest === false}>
-                <Label htmlFor="accutest-ribbon">ACCUTEST Mode</Label>
-                <Select
-                  disabled={computationalParams.includeAccutest === false}
-                  value={computationalParams.accutest || 'NONE'}
-                  onValueChange={(v: any) => updateComputationalParams({ accutest: v })}
-                >
-                  <SelectTrigger id="accutest-ribbon">
-                    <SelectValue placeholder="Select accuracy mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="FULL">FULL (High Accuracy)</SelectItem>
-                    <SelectItem value="PARTIAL">PARTIAL (Moderate)</SelectItem>
-                    <SelectItem value="NONE">NONE (No Checking)</SelectItem>
-                  </SelectContent>
-                </Select>
+              <Separator />
+              <div className="space-y-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="includeAccutest-ribbon"
+                    checked={computationalParams.includeAccutest !== false}
+                    onCheckedChange={(checked) => updateComputationalParams({ includeAccutest: !!checked })}
+                  />
+                  <Label htmlFor="includeAccutest-ribbon" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                    Include ACCUTEST in .INP
+                  </Label>
+                </div>
+                <div className="space-y-2" data-disabled={computationalParams.includeAccutest === false}>
+                  <Label htmlFor="accutest-ribbon">ACCUTEST Mode</Label>
+                  <Select
+                    disabled={computationalParams.includeAccutest === false}
+                    value={computationalParams.accutest || 'NONE'}
+                    onValueChange={(v: any) => updateComputationalParams({ accutest: v })}
+                  >
+                    <SelectTrigger id="accutest-ribbon">
+                      <SelectValue placeholder="Select accuracy mode" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="FULL">FULL (High Accuracy)</SelectItem>
+                      <SelectItem value="PARTIAL">PARTIAL (Moderate)</SelectItem>
+                      <SelectItem value="NONE">NONE (No Checking)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       {/* ── HELP DIALOG ── */}
       <Dialog open={showHelp} onOpenChange={setShowHelp}>
@@ -775,16 +781,18 @@ export function Header({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      {/* Output Requests Dialog — top-level so it stays mounted even when Tools menu is closed */}
-      <Dialog open={showOutputDialog} onOpenChange={handleCloseOutputDialog}>
-        <DialogContent>
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Configure Output Requests</DialogTitle>
-              <div className="flex gap-2">
+      {/* Output Requests Sidebar — slides in from the right */}
+      {showOutputDialog && (
+        <div className="fixed inset-0 z-50 pointer-events-none">
+          <div className="absolute inset-0 bg-black/30 pointer-events-auto" onClick={() => handleCloseOutputDialog(false)} />
+          <div className="absolute right-0 top-0 h-full w-[460px] bg-white shadow-2xl border-l border-slate-200 flex flex-col pointer-events-auto animate-in slide-in-from-right duration-300">
+            <div className="flex items-center justify-between px-5 py-4 border-b bg-slate-50">
+              <h2 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Configure Output Requests</h2>
+              <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-7 text-xs"
                   onClick={() => {
                     const types: ("HISTORY" | "PLOT" | "SPREADSHEET")[] = ["HISTORY", "PLOT", "SPREADSHEET"];
                     const variables = ["Q", "HEAD", "ELEV", "VEL", "PRESS", "PIEZHEAD"];
@@ -792,18 +800,14 @@ export function Header({
                       const isSurgeTank = node.data.type === 'surgeTank';
                       types.forEach(type => {
                         const existsNode = outputRequests.some(req =>
-                          req.elementId === node.id &&
-                          req.requestType === type &&
-                          req.isElement === false
+                          req.elementId === node.id && req.requestType === type && req.isElement === false
                         );
                         if (!existsNode) {
                           addOutputRequest({ elementId: node.id, elementType: "node", requestType: type, isElement: false, variables: [...variables] });
                         }
                         if (isSurgeTank) {
                           const existsElem = outputRequests.some(req =>
-                            req.elementId === node.id &&
-                            req.requestType === type &&
-                            req.isElement === true
+                            req.elementId === node.id && req.requestType === type && req.isElement === true
                           );
                           if (!existsElem) {
                             addOutputRequest({ elementId: node.id, elementType: "node", requestType: type, isElement: true, variables: [...variables] });
@@ -827,194 +831,197 @@ export function Header({
                 <Button
                   variant="outline"
                   size="sm"
+                  className="h-7 text-xs text-destructive hover:text-destructive"
                   onClick={() => { [...outputRequests].forEach(req => removeOutputRequest(req.id)); }}
-                  className="text-destructive hover:text-destructive"
                 >
                   Clear All
                 </Button>
+                <button onClick={() => handleCloseOutputDialog(false)} className="p-1 rounded hover:bg-slate-200 transition-colors ml-1">
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
               </div>
             </div>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {requestType !== "SNAPSHOT" && (
-              <div className="grid gap-2">
-                <Label>Select Element</Label>
-                <Select value={selectedElementId} onValueChange={setSelectedElementId}>
+            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+              {requestType !== "SNAPSHOT" && (
+                <div className="space-y-2">
+                  <Label>Select Element</Label>
+                  <Select value={selectedElementId} onValueChange={setSelectedElementId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select element..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_" disabled>Elements</SelectItem>
+                      {nodes
+                        .filter((n) => n.data.type === "surgeTank" || n.data.type === "pump" || n.data.type === "checkValve" || n.data.type === "turbine" || n.type === "surgeTank" || n.type === "pump" || n.type === "checkValve" || n.type === "turbine")
+                        .filter((n) => !outputRequests.some((req) => req.elementId === n.id && req.requestType === requestType && req.isElement))
+                        .map((n) => (
+                          <SelectItem key={`element-${n.id}`} value={`element:${n.id}`}>{n.data.label}</SelectItem>
+                        ))}
+                      {Array.from(new Map(
+                        edges.filter((e) => e.data?.type === "turbine")
+                          .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
+                          .map(e => [e.data?.label || `Edge ${e.id}`, e])
+                      ).entries()).map(([label, e]) => (
+                        <SelectItem key={`turbine-edge-${e.id}`} value={e.id}>{label}</SelectItem>
+                      ))}
+                      <SelectItem value="__" disabled>Nodes</SelectItem>
+                      {nodes
+                        .filter((n) => !outputRequests.some((req) => req.elementId === n.id && req.requestType === requestType && !req.isElement))
+                        .map((n) => (
+                          <SelectItem key={`node-${n.id}`} value={`node:${n.id}`}>{String(n.data.nodeNumber)}</SelectItem>
+                        ))}
+                      <SelectItem value="___" disabled>Conduits</SelectItem>
+                      {Array.from(new Map(
+                        edges.filter((e) => e.data?.type === "conduit")
+                          .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
+                          .map(e => [e.data?.label || `Edge ${e.id}`, e])
+                      ).entries()).map(([label, e]) => (
+                        <SelectItem key={e.id} value={e.id}>{label}</SelectItem>
+                      ))}
+                      <SelectItem value="____" disabled>Dummy pipe</SelectItem>
+                      {Array.from(new Map(
+                        edges.filter((e) => e.data?.type === "dummy")
+                          .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
+                          .map(e => [e.data?.label || `Edge ${e.id}`, e])
+                      ).entries()).map(([label, e]) => (
+                        <SelectItem key={e.id} value={e.id}>{label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label>Request Type</Label>
+                <Select value={requestType} onValueChange={(v: any) => setRequestType(v)}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Select element..." />
+                    <SelectValue placeholder="Select type..." />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="_" disabled>Elements</SelectItem>
-                    {nodes
-                      .filter((n) => n.data.type === "surgeTank" || n.data.type === "pump" || n.data.type === "checkValve" || n.data.type === "turbine" || n.type === "surgeTank" || n.type === "pump" || n.type === "checkValve" || n.type === "turbine")
-                      .filter((n) => !outputRequests.some((req) => req.elementId === n.id && req.requestType === requestType && req.isElement))
-                      .map((n) => (
-                        <SelectItem key={`element-${n.id}`} value={`element:${n.id}`}>{n.data.label}</SelectItem>
-                      ))}
-                    {Array.from(new Map(
-                      edges.filter((e) => e.data?.type === "turbine")
-                        .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
-                        .map(e => [e.data?.label || `Edge ${e.id}`, e])
-                    ).entries()).map(([label, e]) => (
-                      <SelectItem key={`turbine-edge-${e.id}`} value={e.id}>{label}</SelectItem>
-                    ))}
-                    <SelectItem value="__" disabled>Nodes</SelectItem>
-                    {nodes
-                      .filter((n) => !outputRequests.some((req) => req.elementId === n.id && req.requestType === requestType && !req.isElement))
-                      .map((n) => (
-                        <SelectItem key={`node-${n.id}`} value={`node:${n.id}`}>{String(n.data.nodeNumber)}</SelectItem>
-                      ))}
-                    <SelectItem value="___" disabled>Conduits</SelectItem>
-                    {Array.from(new Map(
-                      edges.filter((e) => e.data?.type === "conduit")
-                        .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
-                        .map(e => [e.data?.label || `Edge ${e.id}`, e])
-                    ).entries()).map(([label, e]) => (
-                      <SelectItem key={e.id} value={e.id}>{label}</SelectItem>
-                    ))}
-                    <SelectItem value="____" disabled>Dummy pipe</SelectItem>
-                    {Array.from(new Map(
-                      edges.filter((e) => e.data?.type === "dummy")
-                        .filter((e) => !outputRequests.some((req) => req.elementId === e.id && req.requestType === requestType))
-                        .map(e => [e.data?.label || `Edge ${e.id}`, e])
-                    ).entries()).map(([label, e]) => (
-                      <SelectItem key={e.id} value={e.id}>{label}</SelectItem>
-                    ))}
+                    <SelectItem value="HISTORY">HISTORY</SelectItem>
+                    <SelectItem value="PLOT">PLOT</SelectItem>
+                    <SelectItem value="SPREADSHEET">SPREADSHEET</SelectItem>
+                    <SelectItem value="SNAPSHOT">SNAPSHOT</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
-            )}
-            <div className="grid gap-2">
-              <Label>Request Type</Label>
-              <Select value={requestType} onValueChange={(v: any) => setRequestType(v)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="HISTORY">HISTORY</SelectItem>
-                  <SelectItem value="PLOT">PLOT</SelectItem>
-                  <SelectItem value="SPREADSHEET">SPREADSHEET</SelectItem>
-                  <SelectItem value="SNAPSHOT">SNAPSHOT</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            {requestType === "SNAPSHOT" ? (
-              <>
-                <div className="grid gap-2">
-                  <Label>TIME</Label>
-                  <input
-                    type="text" inputMode="decimal"
-                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={snapshotTimeInput}
-                    onChange={(e) => setSnapshotTimeInput(e.target.value)}
-                    placeholder="e.g. 0"
-                    data-testid="input-snapshot-time"
-                  />
-                </div>
-                <Button
-                  onClick={() => {
-                    const t = parseFloat(snapshotTimeInput);
-                    if (!isNaN(t)) {
-                      addSnapshotTime(t);
-                      setSnapshotTimeInput("0");
-                      toast({ title: "Snapshot Added", description: `SNAPSHOT TIME ${t} added.` });
-                    }
-                  }}
-                  data-testid="button-add-snapshot"
-                >
-                  Add Snapshot
-                </Button>
-              </>
-            ) : (
-              <>
-                <div className="grid gap-2">
-                  <Label>Variables</Label>
-                  <div className="flex flex-wrap gap-4">
-                    {availableVars.map((v) => (
-                      <div key={v} className="flex items-center gap-2">
-                        <Checkbox
-                          id={`header-var-${v}`}
-                          checked={selectedVars.includes(v)}
-                          onCheckedChange={(checked) => {
-                            if (checked) setSelectedVars([...selectedVars, v]);
-                            else setSelectedVars(selectedVars.filter((sv) => sv !== v));
-                          }}
-                        />
-                        <Label htmlFor={`header-var-${v}`}>{v}</Label>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <Button onClick={handleAddRequest} data-testid="button-add-request">Add Request</Button>
-              </>
-            )}
-            <Separator />
-            <div className="max-h-[200px] overflow-auto">
-              <Label className="mb-2 block">Current Requests ({requestType})</Label>
               {requestType === "SNAPSHOT" ? (
-                snapshotTimes.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No snapshots added yet.</p>
-                ) : (
-                  snapshotTimes.map((t, i) => (
-                    <div key={i} className="flex items-center justify-between text-sm py-1 border-b">
-                      <span>SNAPSHOT TIME {t}</span>
-                      <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeSnapshotTime(i)}>
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
-                    </div>
-                  ))
-                )
+                <>
+                  <div className="space-y-2">
+                    <Label>TIME</Label>
+                    <input
+                      type="text" inputMode="decimal"
+                      className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={snapshotTimeInput}
+                      onChange={(e) => setSnapshotTimeInput(e.target.value)}
+                      placeholder="e.g. 0"
+                      data-testid="input-snapshot-time"
+                    />
+                  </div>
+                  <Button
+                    onClick={() => {
+                      const t = parseFloat(snapshotTimeInput);
+                      if (!isNaN(t)) {
+                        addSnapshotTime(t);
+                        setSnapshotTimeInput("0");
+                        toast({ title: "Snapshot Added", description: `SNAPSHOT TIME ${t} added.` });
+                      }
+                    }}
+                    data-testid="button-add-snapshot"
+                  >
+                    Add Snapshot
+                  </Button>
+                </>
               ) : (
-                [...outputRequests]
-                  .filter((req) => req.requestType === requestType)
-                  .sort((a, b) => {
-                    const elA = nodes.find((n) => n.id === a.elementId) || edges.find((e) => e.id === a.elementId);
-                    const elB = nodes.find((n) => n.id === b.elementId) || edges.find((e) => e.id === b.elementId);
-                    const getSortKey = (el) => {
-                      if (!el) return "zzzz";
-                      if (el.data?.nodeNumber !== undefined) return `node-${String(el.data.nodeNumber).padStart(10, '0')}`;
-                      return `edge-${el.data?.label || el.id}`;
-                    };
-                    return getSortKey(elA).localeCompare(getSortKey(elB), undefined, { numeric: true });
-                  })
-                  .map((req) => {
-                    const el = nodes.find((n) => n.id === req.elementId) || edges.find((e) => e.id === req.elementId);
-                    const isEdgeElem = req.elementType === 'edge';
-                    const isSurgeTankElem = req.elementType === 'node' && el?.data?.type === 'surgeTank' && req.isElement;
-                    const useElem = isEdgeElem || isSurgeTankElem;
-                    const displayLabel = useElem
-                      ? (el?.data?.label || req.elementId)
-                      : (el?.data?.nodeNumber?.toString() || el?.data?.label || req.elementId);
-                    const prefix = useElem ? 'ELEM' : 'NODE';
-                    return (
-                      <div key={`${req.id}-${req.requestType}`} className="flex items-center justify-between text-sm py-1 border-b">
-                        <span>{prefix} {displayLabel} ({req.requestType}): {req.variables.join(", ")}</span>
-                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeOutputRequest(req.id)}>
+                <>
+                  <div className="space-y-2">
+                    <Label>Variables</Label>
+                    <div className="flex flex-wrap gap-4">
+                      {availableVars.map((v) => (
+                        <div key={v} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`header-var-${v}`}
+                            checked={selectedVars.includes(v)}
+                            onCheckedChange={(checked) => {
+                              if (checked) setSelectedVars([...selectedVars, v]);
+                              else setSelectedVars(selectedVars.filter((sv) => sv !== v));
+                            }}
+                          />
+                          <Label htmlFor={`header-var-${v}`}>{v}</Label>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <Button onClick={handleAddRequest} data-testid="button-add-request">Add Request</Button>
+                </>
+              )}
+              <Separator />
+              <div className="space-y-1">
+                <Label className="block mb-2">Current Requests ({requestType})</Label>
+                {requestType === "SNAPSHOT" ? (
+                  snapshotTimes.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No snapshots added yet.</p>
+                  ) : (
+                    snapshotTimes.map((t, i) => (
+                      <div key={i} className="flex items-center justify-between text-sm py-1 border-b">
+                        <span>SNAPSHOT TIME {t}</span>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeSnapshotTime(i)}>
                           <Trash2 className="w-3 h-3" />
                         </Button>
                       </div>
-                    );
-                  })
-              )}
+                    ))
+                  )
+                ) : (
+                  [...outputRequests]
+                    .filter((req) => req.requestType === requestType)
+                    .sort((a, b) => {
+                      const elA = nodes.find((n) => n.id === a.elementId) || edges.find((e) => e.id === a.elementId);
+                      const elB = nodes.find((n) => n.id === b.elementId) || edges.find((e) => e.id === b.elementId);
+                      const getSortKey = (el) => {
+                        if (!el) return "zzzz";
+                        if (el.data?.nodeNumber !== undefined) return `node-${String(el.data.nodeNumber).padStart(10, '0')}`;
+                        return `edge-${el.data?.label || el.id}`;
+                      };
+                      return getSortKey(elA).localeCompare(getSortKey(elB), undefined, { numeric: true });
+                    })
+                    .map((req) => {
+                      const el = nodes.find((n) => n.id === req.elementId) || edges.find((e) => e.id === req.elementId);
+                      const isEdgeElem = req.elementType === 'edge';
+                      const isSurgeTankElem = req.elementType === 'node' && el?.data?.type === 'surgeTank' && req.isElement;
+                      const useElem = isEdgeElem || isSurgeTankElem;
+                      const displayLabel = useElem
+                        ? (el?.data?.label || req.elementId)
+                        : (el?.data?.nodeNumber?.toString() || el?.data?.label || req.elementId);
+                      const prefix = useElem ? 'ELEM' : 'NODE';
+                      return (
+                        <div key={`${req.id}-${req.requestType}`} className="flex items-center justify-between text-sm py-1 border-b">
+                          <span>{prefix} {displayLabel} ({req.requestType}): {req.variables.join(", ")}</span>
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => removeOutputRequest(req.id)}>
+                            <Trash2 className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
             </div>
+            {generateDialogMode && (
+              <div className="px-5 py-4 border-t bg-slate-50 flex items-center gap-3">
+                <p className="text-xs text-muted-foreground flex-1">
+                  Review output requests above, then continue to generate the file.
+                </p>
+                <Button
+                  onClick={handleConfirmGenerate}
+                  className="bg-[#1a73e8] hover:bg-[#1557b0] text-white flex-shrink-0"
+                  data-testid="button-confirm-generate"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Generate .{generateDialogMode === 'inp' ? 'INP' : 'OUT'}
+                </Button>
+              </div>
+            )}
           </div>
-          {generateDialogMode && (
-            <DialogFooter className="pt-2 border-t">
-              <p className="text-xs text-muted-foreground mr-auto self-center">
-                Review output requests above, then continue to generate the file.
-              </p>
-              <Button
-                onClick={handleConfirmGenerate}
-                className="bg-[#1a73e8] hover:bg-[#1557b0] text-white"
-                data-testid="button-confirm-generate"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Generate .{generateDialogMode === 'inp' ? 'INP' : 'OUT'}
-              </Button>
-            </DialogFooter>
-          )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      )}
 
       <FlexTable open={showFlexTable} onClose={() => setShowFlexTable(false)} />
     </div>

@@ -244,6 +244,7 @@ export function generateSystemDiagramSVG(
 </defs>
 <style>
   .ng:hover .tip { visibility: visible !important; }
+  .cg:hover .tip { visibility: visible !important; }
   .tip { visibility: hidden; }
 </style>
 `;
@@ -283,17 +284,29 @@ export function generateSystemDiagramSVG(
 
     svg += `<path d="${d}" ${sty} fill="none" ${mk}/>\n`;
 
-    // Conduit label pill
+    // Conduit label pill — centered on the arrow line
     if (ve.label) {
       const lx = Math.abs(y1 - y2) < 3
         ? (x1 + x2) / 2
         : (x1 * 3 + x2) / 4;   // 25% along the path, on the first horiz segment
-      const ly  = y1;
-      const lw  = ve.label.length * 7 + 14;
-      svg += `<rect class="lbl" x="${lx - lw / 2}" y="${ly - 15}" width="${lw}" height="14"
-  rx="7" fill="white" stroke="#aaa" stroke-width="1"/>\n`;
-      svg += `<text class="lbl" x="${lx}" y="${ly - 5}" text-anchor="middle" font-size="9"
-  font-weight="600" fill="#444" font-family="Arial,sans-serif">${esc(ve.label)}</text>\n`;
+      const ly  = Math.abs(y1 - y2) < 3 ? y1 : y1;
+      const lw  = ve.label.length * 7 + 16;
+      const lh  = 14;
+      const tipW = Math.max(ve.label.length * 7 + 32, 90);
+      svg += `<g class="cg" style="pointer-events:all">
+  <rect class="lbl" x="${lx - lw / 2}" y="${ly - lh / 2}" width="${lw}" height="${lh}"
+    rx="7" fill="white" stroke="#888" stroke-width="1"/>
+  <text class="lbl" x="${lx}" y="${ly + 4.5}" text-anchor="middle" font-size="9"
+    font-weight="700" fill="#333" font-family="Arial,sans-serif">${esc(ve.label)}</text>
+  <g class="tip" style="pointer-events:none;visibility:hidden">
+    <rect x="${lx + lw / 2 + 6}" y="${ly - 20}" width="${tipW}" height="42" rx="6"
+      fill="white" stroke="#bbb" stroke-width="1" filter="url(#sh)"/>
+    <text x="${lx + lw / 2 + 14}" y="${ly - 5}" font-size="11" font-weight="700"
+      fill="#111" font-family="Arial,sans-serif">${esc(ve.label)}</text>
+    <text x="${lx + lw / 2 + 14}" y="${ly + 10}" font-size="10" fill="#666"
+      font-family="Arial,sans-serif">${ve.isDummy ? 'Dummy Pipe' : 'Conduit'}</text>
+  </g>
+</g>\n`;
     }
   });
 
