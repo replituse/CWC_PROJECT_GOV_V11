@@ -2,25 +2,15 @@ import {
   AlertCircle,
   Maximize2,
   Layout,
-  File,
-  Edit2,
   PlusCircle,
   Settings2,
-  Folder,
   Download,
   FilePlus,
   FolderOpen,
   Save,
-  Share2,
-  DownloadCloud,
-  Type,
-  Eraser,
   Trash2,
   Undo2,
   Redo2,
-  Scissors,
-  Copy,
-  Clipboard,
   MousePointer2,
   Cylinder,
   Circle,
@@ -28,7 +18,6 @@ import {
   ArrowRightCircle,
   ListVideo,
   Info,
-  CheckSquare,
   Table2,
   PlayCircle,
   ShieldCheck,
@@ -37,16 +26,8 @@ import {
   BarChart2,
 } from "lucide-react";
 import { FlexTable } from "@/components/FlexTable";
-import {
-  Menubar,
-  MenubarContent,
-  MenubarItem,
-  MenubarMenu,
-  MenubarSeparator,
-  MenubarShortcut,
-  MenubarTrigger,
-} from "@/components/ui/menubar";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { useNetworkStore } from "@/lib/store";
 import {
   Dialog,
@@ -71,6 +52,54 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { generateSystemDiagramSVG } from "@/lib/diagram-generator";
 import folderIcon from "@assets/open-folder_1770356038145.png";
+
+// ─── Ribbon helper components ────────────────────────────────────────────────
+function RibbonBtn({
+  icon, label, onClick, disabled, active, highlight,
+  ...rest
+}: {
+  icon: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+  disabled?: boolean;
+  active?: boolean;
+  highlight?: boolean;
+  [key: string]: any;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      {...rest}
+      className={cn(
+        "flex flex-col items-center justify-center gap-0.5 px-2 py-1 rounded min-w-[46px] transition-colors select-none",
+        disabled ? "opacity-40 cursor-not-allowed" : "cursor-pointer hover:bg-blue-50 active:bg-blue-100",
+        active ? "bg-blue-100 ring-1 ring-blue-300" : "",
+        highlight && !disabled ? "hover:bg-blue-100" : "",
+      )}
+    >
+      <span className="flex items-center justify-center">{icon}</span>
+      <span className="text-[9px] font-medium text-slate-600 leading-tight text-center max-w-[58px]">{label}</span>
+    </button>
+  );
+}
+
+function RibbonGroup({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-stretch">
+      <div className="flex flex-col">
+        <div className="flex items-center gap-0.5 px-1 pt-1 pb-0.5 flex-1">
+          {children}
+        </div>
+        <div className="text-center pb-0.5">
+          <span className="text-[9px] text-slate-400 font-medium tracking-wide uppercase">{label}</span>
+        </div>
+      </div>
+      <div className="w-px bg-slate-200 my-1 mx-0.5 self-stretch flex-shrink-0" />
+    </div>
+  );
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 interface HeaderProps {
   onExport: (fileName?: string) => void;
@@ -107,6 +136,7 @@ export function Header({
   const [showShortcuts, setShowShortcuts] = useState(false);
   const [showFlexTable, setShowFlexTable] = useState(false);
   const [showOutputDialog, setShowOutputDialog] = useState(false);
+  const [showCompParams, setShowCompParams] = useState(false);
   const [generateDialogMode, setGenerateDialogMode] = useState<'inp' | 'out' | null>(null);
 
   // When Designer signals validation passed, open the Output Requests dialog
@@ -319,538 +349,327 @@ export function Header({
   };
 
   return (
-    <div className="flex flex-col border-b bg-background">
-      {/* Top Row: Icon and Project Name */}
-      <div className="flex items-center gap-3 px-4 py-1.5 relative">
-        <img
-          src={folderIcon}
-          alt="Folder"
-          className="w-10 h-10 object-contain"
-        />
-        <div className="flex flex-col">
-          <div className="flex items-center gap-1.5 h-7">
-            <input
-              className={`text-lg font-normal leading-tight text-black bg-transparent border focus:ring-1 focus:ring-[#1a73e8] px-1 -ml-1 rounded cursor-text outline-none hover:bg-[#f1f3f4] ${projectNameError ? 'border-destructive ring-1 ring-destructive' : 'border-transparent'}`}
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              placeholder="Enter project name..."
-            />
-            {projectNameError && (
-              <div className="flex items-center gap-1 text-[10px] text-yellow-600 font-medium ml-2 bg-yellow-50 px-2 py-0.5 rounded border border-yellow-200">
-                <AlertCircle className="w-3 h-3 text-destructive" />
-                {projectNameError}
-              </div>
-            )}
-          </div>
-          <Menubar className="border-none bg-transparent shadow-none h-auto p-0 min-h-0">
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                File
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem
-                  onClick={() => {
-                    clearNetwork();
-                  }}
-                  className="gap-2"
-                >
-                  <FilePlus className="w-4 h-4" /> New
-                </MenubarItem>
-                <MenubarItem onClick={onLoad} className="gap-2">
-                  <FolderOpen className="w-4 h-4" /> Open
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem onClick={onSave} className="gap-2">
-                  <Save className="w-4 h-4" /> {loadedFileHandle ? 'Save' : 'Save (Download)'}
-                </MenubarItem>
-                <MenubarItem onClick={onSaveAs} className="gap-2" data-testid="menu-save-as">
-                  <Save className="w-4 h-4" /> Save As...
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() =>
-                    toast({
-                      title: "Share",
-                      description: "Sharing feature coming soon.",
-                    })
-                  }
-                  className="gap-2"
-                >
-                  <Share2 className="w-4 h-4" /> Share
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem
-                  onClick={() => {
-                    clearNetwork();
-                  }}
-                  className="gap-2 text-destructive focus:text-destructive"
-                >
-                  <Eraser className="w-4 h-4" /> Clear Canvas
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => {
-                    clearNetwork();
-                    setProjectName("Untitled Network");
-                  }}
-                  className="gap-2 text-destructive focus:text-destructive"
-                >
-                  <Trash2 className="w-4 h-4" /> Delete Project
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
+    <div className="flex flex-col border-b bg-white shadow-sm">
 
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                Edit
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem
-                  onClick={undo}
-                  disabled={history.past.length === 0}
-                  className="gap-2"
-                >
-                  <Undo2 className="w-4 h-4" /> Undo{" "}
-                  <MenubarShortcut>Ctrl+Z</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem
-                  onClick={redo}
-                  disabled={history.future.length === 0}
-                  className="gap-2"
-                >
-                  <Redo2 className="w-4 h-4" /> Redo{" "}
-                  <MenubarShortcut>Ctrl+Y</MenubarShortcut>
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem
-                  onClick={() =>
-                    toast({ description: "Cut feature coming soon." })
-                  }
-                  className="gap-2"
-                >
-                  <Scissors className="w-4 h-4" /> Cut{" "}
-                  <MenubarShortcut>⌘X</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() =>
-                    toast({ description: "Copy feature coming soon." })
-                  }
-                  className="gap-2"
-                >
-                  <Scissors className="w-4 h-4 opacity-0 absolute" />{" "}
-                  {/* Placeholder for Copy icon if needed or just use Copy */}
-                  <Copy className="w-4 h-4" /> Copy{" "}
-                  <MenubarShortcut>⌘C</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() =>
-                    toast({ description: "Paste feature coming soon." })
-                  }
-                  className="gap-2"
-                >
-                  <Clipboard className="w-4 h-4" /> Paste{" "}
-                  <MenubarShortcut>⌘V</MenubarShortcut>
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem
-                  onClick={() =>
-                    toast({ description: "Select All feature coming soon." })
-                  }
-                >
-                  Select All <MenubarShortcut>⌘A</MenubarShortcut>
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                View
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem 
-                  onClick={() => {
-                    if (!document.fullscreenElement) {
-                      document.documentElement.requestFullscreen().catch(err => {
-                        toast({
-                          title: "Error",
-                          description: `Error attempting to enable full-screen mode: ${err.message}`,
-                          variant: "destructive",
-                        });
-                      });
-                    } else {
-                      document.exitFullscreen();
-                    }
-                  }}
-                  className="gap-2"
-                >
-                  <Maximize2 className="w-4 h-4" /> {isFullscreen ? "Exit Full Screen" : "Full Screen"}
-                  <MenubarShortcut>F11</MenubarShortcut>
-                </MenubarItem>
-                <MenubarItem 
-                  onClick={() => {
-                    const event = new CustomEvent('toggle-grid');
-                    window.dispatchEvent(event);
-                  }}
-                  className="gap-2"
-                >
-                  <Layout className="w-4 h-4" /> Show Grid
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                Insert
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem
-                  onClick={() => addNode("reservoir", { x: 100, y: 100 })}
-                  className="gap-2"
-                >
-                  <Cylinder className="w-4 h-4 text-blue-600" /> Reservoir
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => addNode("node", { x: 150, y: 150 })}
-                  className="gap-2"
-                >
-                  <Circle className="w-4 h-4 text-slate-600" /> Node
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => addNode("junction", { x: 200, y: 150 })}
-                  className="gap-2"
-                >
-                  <GitCommitHorizontal className="w-4 h-4 text-red-600" />{" "}
-                  Junction
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => addNode("surgeTank", { x: 250, y: 100 })}
-                  className="gap-2"
-                >
-                  <PlusCircle className="w-4 h-4 text-orange-600" /> Surge Tank
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => addNode("flowBoundary", { x: 50, y: 150 })}
-                  className="gap-2"
-                >
-                  <ArrowRightCircle className="w-4 h-4 text-green-600" /> Flow
-                  BC
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => onSetLinkTool ? onSetLinkTool(activeLinkTool === 'pump' ? null : 'pump') : addNode("pump", { x: 200, y: 200 })}
-                  className="gap-2"
-                  data-testid="menu-insert-pump"
-                >
-                  <PlayCircle className={`w-4 h-4 ${activeLinkTool === 'pump' ? 'text-orange-600' : 'text-orange-500'}`} />
-                  Pump {activeLinkTool === 'pump' ? '(active — click nodes)' : ''}
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => onSetLinkTool ? onSetLinkTool(activeLinkTool === 'checkValve' ? null : 'checkValve') : addNode("checkValve", { x: 200, y: 250 })}
-                  className="gap-2"
-                  data-testid="menu-insert-checkvalve"
-                >
-                  <ShieldCheck className={`w-4 h-4 ${activeLinkTool === 'checkValve' ? 'text-violet-800' : 'text-violet-600'}`} />
-                  Check Valve {activeLinkTool === 'checkValve' ? '(active — click nodes)' : ''}
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => onSetLinkTool ? onSetLinkTool(activeLinkTool === 'turbine' ? null : 'turbine') : addNode("turbine", { x: 200, y: 300 })}
-                  className="gap-2"
-                  data-testid="menu-insert-turbine"
-                >
-                  <Settings2 className={`w-4 h-4 ${activeLinkTool === 'turbine' ? 'text-teal-800' : 'text-teal-600'}`} />
-                  Turbine {activeLinkTool === 'turbine' ? '(active — click nodes)' : ''}
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                Configuration
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem 
-                  className="flex items-center justify-between"
-                  onClick={() => setGlobalUnit('SI')}
-                >
-                  SI (Metric) {globalUnit === 'SI' && <Settings2 className="w-3 h-3 ml-2" />}
-                </MenubarItem>
-                <MenubarItem 
-                  className="flex items-center justify-between"
-                  onClick={() => setGlobalUnit('FPS')}
-                >
-                  FPS (Imperial) {globalUnit === 'FPS' && <Settings2 className="w-3 h-3 ml-2" />}
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                Tools
-              </MenubarTrigger>
-              <MenubarContent>
-                <MenubarItem onClick={onShowDiagram} className="gap-2">
-                  <Layout className="w-4 h-4" /> System Diagram Console
-                </MenubarItem>
-                <MenubarItem onClick={() => {
-                  const event = new CustomEvent('toggleNodeSelection');
-                  window.dispatchEvent(event);
-                }} className="gap-2">
-                  <CheckSquare className="w-4 h-4" /> Node Selection
-                </MenubarItem>
-                <MenubarItem
-                  onClick={() => setShowFlexTable(true)}
-                  className="gap-2"
-                  data-testid="menu-flextable"
-                >
-                  <Table2 className="w-4 h-4" /> Flex Table
-                </MenubarItem>
-                <MenubarItem
-                  onClick={onVisualization}
-                  className="gap-2"
-                  data-testid="menu-visualization"
-                >
-                  <BarChart2 className="w-4 h-4" /> Visualization
-                </MenubarItem>
-                <MenubarSeparator />
-                <MenubarItem
-                  onSelect={(e) => {
-                    e.preventDefault();
-                    setGenerateDialogMode(null);
-                    setShowOutputDialog(true);
-                  }}
-                  className="gap-2"
-                >
-                  <ListVideo className="w-4 h-4" /> Output Requests
-                </MenubarItem>
-
-                <Dialog>
-                  <DialogTrigger asChild>
-                    <MenubarItem
-                      onSelect={(e) => e.preventDefault()}
-                      className="gap-2"
-                    >
-                      <Settings2 className="w-4 h-4" /> Computation Parameters
-                    </MenubarItem>
-                  </DialogTrigger>
-                  <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Computational Parameters</DialogTitle>
-                    </DialogHeader>
-                    <div className="grid gap-6 py-4">
-                      <div className="space-y-4">
-                        <div className="flex items-center justify-between">
-                          <Label className="text-sm font-semibold">Time Stages</Label>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            className="h-8"
-                            onClick={() => {
-                              const newStages = [...computationalParams.stages, { dtcomp: 0.01, dtout: 0.1, tmax: 100 }];
-                              updateComputationalParams({ stages: newStages });
-                            }}
-                          >
-                            Add Stage
-                          </Button>
-                        </div>
-                        <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
-                          {computationalParams.stages.map((stage, index) => (
-                            <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-md bg-muted/20 relative group">
-                              <div className="col-span-3 space-y-1">
-                                <Label className="text-[10px]">DTCOMP</Label>
-                                <Input 
-                                  type="text" inputMode="decimal" 
-                                  step="0.001"
-                                  className="h-8 text-xs"
-                                  value={stage.dtcomp}
-                                  onChange={e => {
-                                    const newStages = [...computationalParams.stages];
-                                    newStages[index] = { ...stage, dtcomp: parseFloat(e.target.value) || 0 };
-                                    updateComputationalParams({ stages: newStages });
-                                  }}
-                                />
-                              </div>
-                              <div className="col-span-3 space-y-1">
-                                <Label className="text-[10px]">DTOUT</Label>
-                                <Input 
-                                  type="text" inputMode="decimal" 
-                                  step="0.01"
-                                  className="h-8 text-xs"
-                                  value={stage.dtout}
-                                  onChange={e => {
-                                    const newStages = [...computationalParams.stages];
-                                    newStages[index] = { ...stage, dtout: parseFloat(e.target.value) || 0 };
-                                    updateComputationalParams({ stages: newStages });
-                                  }}
-                                />
-                              </div>
-                              <div className="col-span-4 space-y-1">
-                                <Label className="text-[10px]">TMAX</Label>
-                                <Input 
-                                  type="text" inputMode="decimal" 
-                                  className="h-8 text-xs"
-                                  value={stage.tmax}
-                                  onChange={e => {
-                                    const newStages = [...computationalParams.stages];
-                                    newStages[index] = { ...stage, tmax: parseFloat(e.target.value) || 0 };
-                                    updateComputationalParams({ stages: newStages });
-                                  }}
-                                />
-                              </div>
-                              <div className="col-span-2 pb-0.5">
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
-                                  className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                                  disabled={computationalParams.stages.length === 1}
-                                  onClick={() => {
-                                    const newStages = computationalParams.stages.filter((_, i) => i !== index);
-                                    updateComputationalParams({ stages: newStages });
-                                  }}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-4">
-                        <div className="flex items-center space-x-2">
-                          <Checkbox 
-                            id="includeAccutest-header" 
-                            checked={computationalParams.includeAccutest !== false}
-                            onCheckedChange={(checked) => updateComputationalParams({ includeAccutest: !!checked })}
-                          />
-                          <Label htmlFor="includeAccutest-header" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
-                            Include ACCUTEST in .INP
-                          </Label>
-                        </div>
-
-                        <div className="space-y-2 opacity-100 data-[disabled=true]:opacity-50 transition-opacity" data-disabled={computationalParams.includeAccutest === false}>
-                          <Label htmlFor="accutest-header">ACCUTEST Mode</Label>
-                          <Select 
-                            disabled={computationalParams.includeAccutest === false}
-                            value={computationalParams.accutest || 'NONE'} 
-                            onValueChange={(v: any) => updateComputationalParams({ accutest: v })}
-                          >
-                            <SelectTrigger id="accutest-header">
-                              <SelectValue placeholder="Select accuracy mode" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="FULL">FULL (High Accuracy)</SelectItem>
-                              <SelectItem value="PARTIAL">PARTIAL (Moderate)</SelectItem>
-                              <SelectItem value="NONE">NONE (No Checking)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                    </div>
-                  </DialogContent>
-                </Dialog>
-              </MenubarContent>
-            </MenubarMenu>
-
-            <MenubarMenu>
-              <MenubarTrigger className="text-[14px] font-normal h-7 text-black hover:bg-[#f1f3f4] data-[state=open]:bg-[#f1f3f4] px-2 rounded cursor-default">
-                Help
-              </MenubarTrigger>
-              <MenubarContent>
-                <Dialog open={showHelp} onOpenChange={setShowHelp}>
-                  <DialogTrigger asChild>
-                    <MenubarItem onSelect={(e) => e.preventDefault()} className="gap-2">
-                      <Info className="w-4 h-4" /> Help Content
-                    </MenubarItem>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto text-black">
-                    <DialogHeader>
-                      <DialogTitle>How to use this Software</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <section>
-                        <h4 className="font-semibold text-lg">Introduction</h4>
-                        <p className="text-sm text-muted-foreground">This hydraulic transient analysis software allows you to design and simulate water networks, analyzing pressure surges and flow changes over time.</p>
-                      </section>
-                      <section>
-                        <h4 className="font-semibold text-base">Designing your Network</h4>
-                        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                          <li>Use the **Insert** menu or Toolbar to add Reservoirs, Nodes, Junctions, Surge Tanks, and Flow Boundaries.</li>
-                          <li>Click and drag from a blue dot on one node to another to create a **Conduit** (pipe).</li>
-                          <li>Double-click on any element to edit its properties (Elevation, Length, Diameter, etc.) in the sidebar.</li>
-                        </ul>
-                      </section>
-                      <section>
-                        <h4 className="font-semibold text-base">Simulation & Output</h4>
-                        <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
-                          <li>Set your simulation time and steps in **Tools &gt; Computation Parameters**.</li>
-                          <li>Configure which variables you want to track in **Tools &gt; Output Requests**.</li>
-                          <li>Use **Generate .INP** to get the input file or **Generate .OUT** to run the simulation and get results.</li>
-                        </ul>
-                      </section>
-                    </div>
-                    <DialogFooter>
-                      <Button onClick={() => setShowHelp(false)}>Close</Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-
-                <MenubarItem
-                  onClick={() => {
-                    const event = new CustomEvent('toggle-shortcut-console');
-                    window.dispatchEvent(event);
-                  }}
-                  className="gap-2"
-                >
-                  <Layout className="w-4 h-4" /> Shortcuts
-                </MenubarItem>
-              </MenubarContent>
-            </MenubarMenu>
-          </Menubar>
+      {/* ── TITLE BAR ── */}
+      <div className="relative flex items-center gap-2 px-3 py-1 border-b border-slate-100">
+        <img src={folderIcon} alt="Folder" className="w-7 h-7 object-contain flex-shrink-0" />
+        <div className="flex items-center gap-2">
+          <input
+            className={`text-sm font-medium text-black bg-transparent border focus:ring-1 focus:ring-blue-500 px-1.5 py-0.5 rounded outline-none hover:bg-slate-50 min-w-[180px] ${projectNameError ? 'border-red-400 ring-1 ring-red-400' : 'border-transparent'}`}
+            value={projectName}
+            onChange={(e) => setProjectName(e.target.value)}
+            placeholder="Enter project name..."
+          />
+          {projectNameError && (
+            <div className="flex items-center gap-1 text-[10px] text-yellow-600 font-medium bg-yellow-50 px-2 py-0.5 rounded border border-yellow-200">
+              <AlertCircle className="w-3 h-3 text-red-500" />
+              {projectNameError}
+            </div>
+          )}
         </div>
-
-        {/* Center Header Project Name */}
-        <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          <h1 className="text-xl font-semibold text-gray-800 tracking-tight">
+        <div className="absolute left-1/2 -translate-x-1/2 pointer-events-none select-none">
+          <span className="text-sm font-semibold text-gray-700 tracking-tight whitespace-nowrap">
             Hydraulic transient analysis software
-          </h1>
+          </span>
         </div>
-
-        <div className="ml-auto flex items-center gap-2 pr-4">
-          <Button
-            variant={showHoverData ? "secondary" : "outline"}
-            size="sm"
-            onClick={() => setShowHoverData(!showHoverData)}
-            className="h-9 px-3 rounded-full font-medium shadow-sm transition-all gap-1.5"
-            title={showHoverData ? "Hide hover data" : "Show hover data"}
-            data-testid="button-toggle-hover-data"
-          >
-            {showHoverData ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
-            <span className="text-xs hidden sm:inline">{showHoverData ? "Hide Label" : "Show Label"}</span>
-          </Button>
-
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleExport}
-            className="h-9 px-6 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white font-medium shadow-sm transition-all"
-            data-testid="button-generate-inp"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            Generate .INP
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleOutGenerate}
-            disabled={isGeneratingOut}
-            className="h-9 px-6 rounded-full border-[#1a73e8] text-[#1a73e8] hover:bg-[#1a73e8]/10 font-medium shadow-sm transition-all"
-            data-testid="button-generate-out"
-          >
-            <Download className="w-4 h-4 mr-2" />
-            {isGeneratingOut ? "Processing..." : "Generate .OUT"}
-          </Button>
+        <div className="ml-auto flex items-center gap-1.5">
+          <span className="text-[10px] text-slate-400 font-medium">Units:</span>
+          <button
+            onClick={() => setGlobalUnit('SI')}
+            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded border transition-colors ${globalUnit === 'SI' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+          >SI</button>
+          <button
+            onClick={() => setGlobalUnit('FPS')}
+            className={`text-[11px] font-semibold px-2.5 py-0.5 rounded border transition-colors ${globalUnit === 'FPS' ? 'bg-blue-600 border-blue-600 text-white' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+          >FPS</button>
         </div>
       </div>
+
+      {/* ── RIBBON ── */}
+      <div className="flex items-stretch bg-[#f3f5f9] overflow-x-auto border-b border-slate-200">
+
+        <RibbonGroup label="File">
+          <RibbonBtn icon={<FilePlus className="w-[18px] h-[18px]" />} label="New" onClick={() => { clearNetwork(); }} />
+          <RibbonBtn icon={<FolderOpen className="w-[18px] h-[18px]" />} label="Open" onClick={onLoad} />
+          <RibbonBtn icon={<Save className="w-[18px] h-[18px]" />} label="Save" onClick={onSave} />
+          <RibbonBtn icon={<Save className="w-[18px] h-[18px]" />} label="Save As" onClick={onSaveAs} />
+        </RibbonGroup>
+
+        <RibbonGroup label="Edit">
+          <RibbonBtn icon={<Undo2 className="w-[18px] h-[18px]" />} label="Undo" onClick={undo} disabled={history.past.length === 0} />
+          <RibbonBtn icon={<Redo2 className="w-[18px] h-[18px]" />} label="Redo" onClick={redo} disabled={history.future.length === 0} />
+        </RibbonGroup>
+
+        <RibbonGroup label="Insert">
+          <RibbonBtn icon={<Cylinder className="w-[18px] h-[18px] text-blue-600" />} label="Reservoir" onClick={() => addNode("reservoir", { x: 100, y: 100 })} />
+          <RibbonBtn icon={<Circle className="w-[18px] h-[18px] text-blue-500" />} label="Node" onClick={() => addNode("node", { x: 150, y: 150 })} />
+          <RibbonBtn icon={<GitCommitHorizontal className="w-[18px] h-[18px] text-red-500" />} label="Junction" onClick={() => addNode("junction", { x: 200, y: 150 })} />
+          <RibbonBtn icon={<PlusCircle className="w-[18px] h-[18px] text-orange-500" />} label="Surge Tank" onClick={() => addNode("surgeTank", { x: 250, y: 100 })} />
+          <RibbonBtn icon={<ArrowRightCircle className="w-[18px] h-[18px] text-green-600" />} label="Flow BC" onClick={() => addNode("flowBoundary", { x: 50, y: 150 })} />
+          <RibbonBtn
+            icon={<PlayCircle className={`w-[18px] h-[18px] ${activeLinkTool === 'pump' ? 'text-orange-700' : 'text-orange-500'}`} />}
+            label="Pump"
+            onClick={() => onSetLinkTool?.(activeLinkTool === 'pump' ? null : 'pump')}
+            active={activeLinkTool === 'pump'}
+            data-testid="ribbon-btn-pump"
+          />
+          <RibbonBtn
+            icon={<ShieldCheck className={`w-[18px] h-[18px] ${activeLinkTool === 'checkValve' ? 'text-violet-800' : 'text-violet-600'}`} />}
+            label="Check Valve"
+            onClick={() => onSetLinkTool?.(activeLinkTool === 'checkValve' ? null : 'checkValve')}
+            active={activeLinkTool === 'checkValve'}
+            data-testid="ribbon-btn-checkvalve"
+          />
+          <RibbonBtn
+            icon={<Settings2 className={`w-[18px] h-[18px] ${activeLinkTool === 'turbine' ? 'text-teal-800' : 'text-teal-600'}`} />}
+            label="Turbine"
+            onClick={() => onSetLinkTool?.(activeLinkTool === 'turbine' ? null : 'turbine')}
+            active={activeLinkTool === 'turbine'}
+            data-testid="ribbon-btn-turbine"
+          />
+        </RibbonGroup>
+
+        <RibbonGroup label="View">
+          <RibbonBtn
+            icon={<Layout className="w-[18px] h-[18px]" />}
+            label="Grid"
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-grid'))}
+          />
+          <RibbonBtn
+            icon={<Maximize2 className="w-[18px] h-[18px]" />}
+            label={isFullscreen ? "Exit FS" : "Full Screen"}
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+              } else {
+                document.exitFullscreen();
+              }
+            }}
+          />
+          <RibbonBtn
+            icon={showHoverData ? <Eye className="w-[18px] h-[18px]" /> : <EyeOff className="w-[18px] h-[18px]" />}
+            label={showHoverData ? "Hide Labels" : "Show Labels"}
+            onClick={() => setShowHoverData(!showHoverData)}
+            active={showHoverData}
+            data-testid="ribbon-btn-toggle-labels"
+          />
+        </RibbonGroup>
+
+        <RibbonGroup label="Tools">
+          <RibbonBtn icon={<Layout className="w-[18px] h-[18px]" />} label="Diagram" onClick={onShowDiagram} />
+          <RibbonBtn
+            icon={<MousePointer2 className="w-[18px] h-[18px]" />}
+            label="Node Sel."
+            onClick={() => window.dispatchEvent(new CustomEvent('toggleNodeSelection'))}
+          />
+          <RibbonBtn
+            icon={<Table2 className="w-[18px] h-[18px]" />}
+            label="Flex Table"
+            onClick={() => setShowFlexTable(true)}
+            data-testid="ribbon-btn-flextable"
+          />
+          <RibbonBtn
+            icon={<BarChart2 className="w-[18px] h-[18px]" />}
+            label="Visualization"
+            onClick={onVisualization}
+            data-testid="ribbon-btn-visualization"
+          />
+        </RibbonGroup>
+
+        <RibbonGroup label="Analysis">
+          <RibbonBtn
+            icon={<Settings2 className="w-[18px] h-[18px]" />}
+            label="Comp. Params"
+            onClick={() => setShowCompParams(true)}
+          />
+          <RibbonBtn
+            icon={<ListVideo className="w-[18px] h-[18px]" />}
+            label="Output Req."
+            onClick={() => { setGenerateDialogMode(null); setShowOutputDialog(true); }}
+          />
+        </RibbonGroup>
+
+        <RibbonGroup label="Generate">
+          <RibbonBtn
+            icon={<Download className="w-[18px] h-[18px] text-blue-700" />}
+            label="Generate .INP"
+            onClick={handleExport}
+            highlight
+            data-testid="ribbon-btn-generate-inp"
+          />
+          <RibbonBtn
+            icon={<Download className="w-[18px] h-[18px] text-blue-700" />}
+            label={isGeneratingOut ? "Processing..." : "Generate .OUT"}
+            onClick={handleOutGenerate}
+            highlight
+            disabled={isGeneratingOut}
+            data-testid="ribbon-btn-generate-out"
+          />
+        </RibbonGroup>
+
+        <RibbonGroup label="Help">
+          <RibbonBtn icon={<Info className="w-[18px] h-[18px]" />} label="Help" onClick={() => setShowHelp(true)} />
+          <RibbonBtn
+            icon={<Layout className="w-[18px] h-[18px]" />}
+            label="Shortcuts"
+            onClick={() => window.dispatchEvent(new CustomEvent('toggle-shortcut-console'))}
+          />
+        </RibbonGroup>
+
+      </div>
+
+      {/* ── COMPUTATION PARAMETERS DIALOG ── */}
+      <Dialog open={showCompParams} onOpenChange={setShowCompParams}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Computational Parameters</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-6 py-4">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-semibold">Time Stages</Label>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-8"
+                  onClick={() => {
+                    const newStages = [...computationalParams.stages, { dtcomp: 0.01, dtout: 0.1, tmax: 100 }];
+                    updateComputationalParams({ stages: newStages });
+                  }}
+                >
+                  Add Stage
+                </Button>
+              </div>
+              <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                {computationalParams.stages.map((stage, index) => (
+                  <div key={index} className="grid grid-cols-12 gap-2 items-end p-3 border rounded-md bg-muted/20 relative group">
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-[10px]">DTCOMP</Label>
+                      <Input
+                        type="text" inputMode="decimal"
+                        step="0.001"
+                        className="h-8 text-xs"
+                        value={stage.dtcomp}
+                        onChange={e => {
+                          const newStages = [...computationalParams.stages];
+                          newStages[index] = { ...stage, dtcomp: parseFloat(e.target.value) || 0 };
+                          updateComputationalParams({ stages: newStages });
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-3 space-y-1">
+                      <Label className="text-[10px]">DTOUT</Label>
+                      <Input
+                        type="text" inputMode="decimal"
+                        step="0.01"
+                        className="h-8 text-xs"
+                        value={stage.dtout}
+                        onChange={e => {
+                          const newStages = [...computationalParams.stages];
+                          newStages[index] = { ...stage, dtout: parseFloat(e.target.value) || 0 };
+                          updateComputationalParams({ stages: newStages });
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-4 space-y-1">
+                      <Label className="text-[10px]">TMAX</Label>
+                      <Input
+                        type="text" inputMode="decimal"
+                        className="h-8 text-xs"
+                        value={stage.tmax}
+                        onChange={e => {
+                          const newStages = [...computationalParams.stages];
+                          newStages[index] = { ...stage, tmax: parseFloat(e.target.value) || 0 };
+                          updateComputationalParams({ stages: newStages });
+                        }}
+                      />
+                    </div>
+                    <div className="col-span-2 pb-0.5">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                        disabled={computationalParams.stages.length === 1}
+                        onClick={() => {
+                          const newStages = computationalParams.stages.filter((_, i) => i !== index);
+                          updateComputationalParams({ stages: newStages });
+                        }}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <Separator />
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="includeAccutest-ribbon"
+                  checked={computationalParams.includeAccutest !== false}
+                  onCheckedChange={(checked) => updateComputationalParams({ includeAccutest: !!checked })}
+                />
+                <Label htmlFor="includeAccutest-ribbon" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Include ACCUTEST in .INP
+                </Label>
+              </div>
+              <div className="space-y-2" data-disabled={computationalParams.includeAccutest === false}>
+                <Label htmlFor="accutest-ribbon">ACCUTEST Mode</Label>
+                <Select
+                  disabled={computationalParams.includeAccutest === false}
+                  value={computationalParams.accutest || 'NONE'}
+                  onValueChange={(v: any) => updateComputationalParams({ accutest: v })}
+                >
+                  <SelectTrigger id="accutest-ribbon">
+                    <SelectValue placeholder="Select accuracy mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FULL">FULL (High Accuracy)</SelectItem>
+                    <SelectItem value="PARTIAL">PARTIAL (Moderate)</SelectItem>
+                    <SelectItem value="NONE">NONE (No Checking)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── HELP DIALOG ── */}
+      <Dialog open={showHelp} onOpenChange={setShowHelp}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto text-black">
+          <DialogHeader>
+            <DialogTitle>How to use this Software</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <section>
+              <h4 className="font-semibold text-lg">Introduction</h4>
+              <p className="text-sm text-muted-foreground">This hydraulic transient analysis software allows you to design and simulate water networks, analyzing pressure surges and flow changes over time.</p>
+            </section>
+            <section>
+              <h4 className="font-semibold text-base">Designing your Network</h4>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                <li>Use the ribbon Insert group to add Reservoirs, Nodes, Junctions, Surge Tanks, and Flow Boundaries.</li>
+                <li>Click and drag from a blue dot on one node to another to create a Conduit (pipe).</li>
+                <li>Double-click on any element to edit its properties (Elevation, Length, Diameter, etc.) in the sidebar.</li>
+              </ul>
+            </section>
+            <section>
+              <h4 className="font-semibold text-base">Simulation &amp; Output</h4>
+              <ul className="list-disc pl-5 text-sm text-muted-foreground space-y-1">
+                <li>Set your simulation time and steps in Analysis &gt; Comp. Params.</li>
+                <li>Configure which variables you want to track in Analysis &gt; Output Req.</li>
+                <li>Use Generate .INP to get the input file or Generate .OUT to run the simulation and get results.</li>
+              </ul>
+            </section>
+          </div>
+          <DialogFooter>
+            <Button onClick={() => setShowHelp(false)}>Close</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       {/* Output Requests Dialog — top-level so it stays mounted even when Tools menu is closed */}
       <Dialog open={showOutputDialog} onOpenChange={handleCloseOutputDialog}>
         <DialogContent>
