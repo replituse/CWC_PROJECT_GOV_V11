@@ -15,7 +15,7 @@ function PumpIcon({ color, label }: { color: string; label?: string }) {
   return (
     <div style={{
       width: 48, height: 48, borderRadius: '50%',
-      border: `2px solid ${color}`, background: 'white',
+      border: `3px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <img src={waterPumpIcon} style={{ width: 28, height: 28, objectFit: 'contain', pointerEvents: 'none' }} alt="Pump" />
@@ -27,7 +27,7 @@ function CheckValveIcon({ color, label }: { color: string; label?: string }) {
   return (
     <div style={{
       width: 48, height: 48, borderRadius: '50%',
-      border: `2px solid ${color}`, background: 'white',
+      border: `3px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <img src={pipeIcon} style={{ width: 28, height: 28, objectFit: 'contain', pointerEvents: 'none' }} alt="Check Valve" />
@@ -39,7 +39,7 @@ function TurbineIcon({ color, label }: { color: string; label?: string }) {
   return (
     <div style={{
       width: 48, height: 48, borderRadius: '50%',
-      border: `2px solid ${color}`, background: 'white',
+      border: `3px solid ${color}`, background: 'white',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <img src={turbineImgIcon} style={{ width: 28, height: 28, objectFit: 'contain', pointerEvents: 'none' }} alt="Turbine" />
@@ -79,11 +79,13 @@ export const ConnectionEdge = memo(({
   const isElementEdge = isPump || isCheckValve || isTurbine;
 
   const isDummy = edgeType === 'dummy';
-  const strokeColor = isPump ? '#f97316'
-    : isCheckValve ? '#8b5cf6'
-    : isTurbine ? '#14b8a6'
+
+  const strokeColor = isPump ? '#3d3100'
+    : isCheckValve ? '#007a3f'
+    : isTurbine ? '#ffd21f'
     : isDummy ? '#94a3b8'
-    : '#3b82f6';
+    : '#001b3d';
+
   const strokeDasharray = isDummy ? '8 8' : undefined;
 
   const tooltipTitle = isPump ? 'Pump Properties'
@@ -96,15 +98,15 @@ export const ConnectionEdge = memo(({
 
   return (
     <>
-      <BaseEdge 
-        path={edgePath} 
-        markerEnd={markerEnd} 
+      <BaseEdge
+        path={edgePath}
+        markerEnd={markerEnd}
         style={{
           ...style,
           strokeWidth: isElementEdge ? 2.5 : isDummy ? 2 : 2.5,
           stroke: strokeColor,
           strokeDasharray,
-        }} 
+        }}
       />
       <EdgeLabelRenderer>
         <div
@@ -115,7 +117,7 @@ export const ConnectionEdge = memo(({
           }}
           className="nodrag nopan"
         >
-          <TooltipWrapper 
+          <TooltipWrapper
             content={<DataList data={displayData} title={tooltipTitle} />}
           >
             {isElementEdge ? (
