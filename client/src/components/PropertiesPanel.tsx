@@ -260,6 +260,32 @@ function TcharEditor({ tType, activeTc, updateTcharData }: {
   );
 }
 
+function PropSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="border border-slate-200 rounded-md overflow-hidden">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        className="w-full flex items-center justify-between px-3 py-2 bg-[#e8edf5] hover:bg-[#dce3ef] transition-colors select-none"
+      >
+        <span className="text-[11px] font-semibold text-black uppercase tracking-wider" style={{ fontFamily: 'Poppins, sans-serif' }}>{title}</span>
+        {open ? <ChevronDown className="h-3.5 w-3.5 text-black" /> : <ChevronRight className="h-3.5 w-3.5 text-black" />}
+      </button>
+      {open && <div className="bg-white">{children}</div>}
+    </div>
+  );
+}
+
+function PropRow({ label, children, noBorder }: { label: string; children: React.ReactNode; noBorder?: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 px-3 py-2 ${!noBorder ? 'border-b border-slate-100' : ''}`}>
+      <span className="text-[12px] font-medium text-black w-[42%] shrink-0 leading-tight" style={{ fontFamily: 'Poppins, sans-serif' }}>{label}</span>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
+}
+
 export function PropertiesPanel() {
 
   const { 
@@ -633,86 +659,131 @@ export function PropertiesPanel() {
     }
   };
 
-  return (
-    <div className="h-full flex flex-col bg-card border-l border-border">
-      <CardHeader className="pb-3 border-b border-border/50 bg-muted/20 shrink-0">
-        <CardTitle className="text-lg flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="capitalize truncate">{element.data?.type || element.type}</span>
-            <span className="text-muted-foreground font-normal text-sm shrink-0">#{selectedElementId}</span>
-          </div>
-          <div className="flex bg-muted rounded-md p-0.5 gap-0.5 shrink-0">
-            <Button
-              variant={currentUnit === 'SI' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 px-2.5 text-xs"
-              onClick={() => handleUnitToggle('SI')}
-            >
-              SI
-            </Button>
-            <Button
-              variant={currentUnit === 'FPS' ? 'secondary' : 'ghost'}
-              size="sm"
-              className="h-7 px-2.5 text-xs"
-              onClick={() => handleUnitToggle('FPS')}
-            >
-              FPS
-            </Button>
-          </div>
-        </CardTitle>
-      </CardHeader>
-      
-      <CardContent className="flex-1 overflow-y-auto space-y-6 pt-6 pb-4 min-h-0">
+  const elementTypeLabel = (() => {
+    const t = element.data?.type || element.type || '';
+    const map: Record<string, string> = {
+      reservoir: 'Reservoir',
+      node: 'Node',
+      junction: 'Junction',
+      surgeTank: 'Surge Tank',
+      flowBoundary: 'Flow Boundary',
+      conduit: 'Conduit',
+      pump: 'Pump',
+      checkValve: 'Check Valve',
+      turbine: 'Turbine',
+    };
+    return map[t] || t.charAt(0).toUpperCase() + t.slice(1);
+  })();
 
-        {/* Common Properties */}
-        <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground/80">General</h4>
-          <div className="grid gap-2">
-            <Label htmlFor="label">Label / ID</Label>
-            <Input 
-              id="label" 
-              data-testid="input-label"
-              value={formData.label ?? ''} 
-              onChange={(e) => isNode ? handleChange('label', e.target.value) : handleLabelChange(e.target.value)} 
-            />
-            {!isNode && (() => {
-              const lbl = (formData.label as string) || '';
-              const others = edges.filter(e => e.id !== selectedElementId && (e.data?.label as string) === lbl && (e.data?.type === 'conduit' || e.data?.type === 'dummy'));
-              if (others.length > 0) {
-                return (
-                  <div className="rounded-md bg-amber-50 border border-amber-300 px-2.5 py-1.5 flex items-start gap-1.5" data-testid="warning-duplicate-label">
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
-                    <p className="text-[10px] text-amber-700 leading-snug">
-                      Label &quot;{lbl}&quot; is already used by {others.length === 1 ? '1 other conduit' : `${others.length} other conduits`}.
-                    </p>
-                  </div>
-                );
-              }
-              return null;
-            })()}
-            {profileApplied && (
-              <p className="text-[10px] text-green-600 flex items-center gap-1" data-testid="text-profile-applied">
-                <CheckCircle2 className="h-3 w-3" />
-                Profile &quot;{profileApplied}&quot; applied
-              </p>
-            )}
+  return (
+    <div className="h-full flex flex-col bg-white border-l border-slate-200" style={{ fontFamily: 'Poppins, sans-serif' }}>
+
+      {/* ── MS HAMMER-style header ── */}
+      <div className="shrink-0 border-b border-slate-200 bg-white">
+        <div className="px-4 pt-3 pb-1">
+          <span className="text-[10px] font-semibold text-black uppercase tracking-[0.12em]">Properties</span>
+        </div>
+        <div className="flex items-center justify-between px-4 pb-3 gap-2">
+          <div className="min-w-0">
+            <div className="text-[16px] font-semibold text-black leading-tight truncate">{elementTypeLabel}</div>
+            <div className="text-[11px] font-medium text-black mt-0.5">ID: {selectedElementId}</div>
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="comment">Comment</Label>
-            <Input 
-              id="comment" 
-              placeholder="Internal comment (c/C style)"
-              value={formData.comment ?? ''} 
-              onChange={(e) => handleChange('comment', e.target.value)} 
-            />
+          {/* SI / FPS pill — identical to header */}
+          <div className="flex items-center rounded-full border-2 border-slate-300 bg-white overflow-hidden shadow-sm shrink-0">
+            <button
+              onClick={() => handleUnitToggle('SI')}
+              className={`text-[12px] font-bold px-3 py-0.5 transition-colors ${currentUnit === 'SI' ? 'bg-blue-600 text-white' : 'text-black hover:bg-slate-50'}`}
+            >SI</button>
+            <button
+              onClick={() => handleUnitToggle('FPS')}
+              className={`text-[12px] font-bold px-3 py-0.5 transition-colors ${currentUnit === 'FPS' ? 'bg-blue-600 text-white' : 'text-black hover:bg-slate-50'}`}
+            >FPS</button>
           </div>
         </div>
+      </div>
 
-        <Separator />
+      <div className="flex-1 overflow-y-auto min-h-0 px-3 py-3 space-y-3">
+
+        {/* ── GENERAL SECTION ── */}
+        {element.data?.type === 'reservoir' ? (
+          <PropSection title="General">
+            <PropRow label="Label / ID">
+              <Input
+                id="label"
+                data-testid="input-label"
+                value={formData.label ?? ''}
+                onChange={(e) => isNode ? handleChange('label', e.target.value) : handleLabelChange(e.target.value)}
+                className="h-7 text-[12px] font-medium text-black border-slate-300"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              />
+              {profileApplied && (
+                <p className="text-[10px] text-green-700 flex items-center gap-1 mt-1" data-testid="text-profile-applied">
+                  <CheckCircle2 className="h-3 w-3" /> Profile &quot;{profileApplied}&quot; applied
+                </p>
+              )}
+            </PropRow>
+            <PropRow label="Comment" noBorder>
+              <Input
+                id="comment"
+                placeholder="Internal comment"
+                value={formData.comment ?? ''}
+                onChange={(e) => handleChange('comment', e.target.value)}
+                className="h-7 text-[12px] font-medium text-black border-slate-300"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              />
+            </PropRow>
+          </PropSection>
+        ) : (
+          /* Legacy General block for non-reservoir elements */
+          <div className="space-y-4">
+            <h4 className="text-sm font-semibold text-black" style={{ fontFamily: 'Poppins, sans-serif' }}>General</h4>
+            <div className="grid gap-2">
+              <Label htmlFor="label">Label / ID</Label>
+              <Input
+                id="label"
+                data-testid="input-label"
+                value={formData.label ?? ''}
+                onChange={(e) => isNode ? handleChange('label', e.target.value) : handleLabelChange(e.target.value)}
+              />
+              {!isNode && (() => {
+                const lbl = (formData.label as string) || '';
+                const others = edges.filter(e => e.id !== selectedElementId && (e.data?.label as string) === lbl && (e.data?.type === 'conduit' || e.data?.type === 'dummy'));
+                if (others.length > 0) {
+                  return (
+                    <div className="rounded-md bg-amber-50 border border-amber-300 px-2.5 py-1.5 flex items-start gap-1.5" data-testid="warning-duplicate-label">
+                      <AlertTriangle className="h-3.5 w-3.5 text-amber-500 mt-0.5 shrink-0" />
+                      <p className="text-[10px] text-amber-700 leading-snug">
+                        Label &quot;{lbl}&quot; is already used by {others.length === 1 ? '1 other conduit' : `${others.length} other conduits`}.
+                      </p>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+              {profileApplied && (
+                <p className="text-[10px] text-green-600 flex items-center gap-1" data-testid="text-profile-applied">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Profile &quot;{profileApplied}&quot; applied
+                </p>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="comment">Comment</Label>
+              <Input
+                id="comment"
+                placeholder="Internal comment (c/C style)"
+                value={formData.comment ?? ''}
+                onChange={(e) => handleChange('comment', e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {element.data?.type !== 'reservoir' && <Separator />}
 
         {/* Specific Properties based on Type */}
         <div className="space-y-4">
-          <h4 className="text-sm font-semibold text-foreground/80">Parameters</h4>
+          {element.data?.type !== 'reservoir' && <h4 className="text-sm font-semibold text-black" style={{ fontFamily: 'Poppins, sans-serif' }}>Parameters</h4>}
           
           {!isNode && (formData.type === 'conduit' || formData.type === 'dummy' || !formData.type) && (
             <div className="grid gap-2 mb-4">
@@ -736,6 +807,7 @@ export function PropertiesPanel() {
 
           {isNode && (element.data?.type === 'node' || element.data?.type === 'junction' || element.data?.type === 'reservoir' || element.data?.type === 'surgeTank' || element.data?.type === 'flowBoundary' || formData.type_st) && (
             <>
+              {element.data?.type === 'reservoir' ? null : (
               <div className="grid gap-1">
                 <Label htmlFor="nodeNum">Node Number</Label>
                 {(() => {
@@ -771,6 +843,193 @@ export function PropertiesPanel() {
                   );
                 })()}
               </div>
+              )}
+
+              {/* ── RESERVOIR: HAMMER-style PropSections ── */}
+              {element.data?.type === 'reservoir' && (() => {
+                const parsedNum = parseInt(nodeNumInput, 10);
+                const isDuplicate = !isNaN(parsedNum) && nodes.some(
+                  n => n.id !== selectedElementId && n.data?.nodeNumber === parsedNum
+                );
+                return (
+                  <>
+                    {/* Identification section */}
+                    <PropSection title="Identification">
+                      <PropRow label="Node Number">
+                        <Input
+                          id="nodeNum"
+                          data-testid="input-node-number"
+                          type="text"
+                          inputMode="numeric"
+                          value={nodeNumInput}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v === '' || /^\d+$/.test(v)) setNodeNumInput(v);
+                          }}
+                          onBlur={handleNodeNumberBlur}
+                          className={`h-7 text-[12px] font-medium text-black border-slate-300 ${isDuplicate ? 'border-red-500 ring-1 ring-red-500' : ''}`}
+                          style={{ fontFamily: 'Poppins, sans-serif' }}
+                        />
+                        {isDuplicate && (
+                          <p className="text-[10px] text-red-600 mt-1 flex items-center gap-1" data-testid="error-node-number-duplicate">
+                            Node {parsedNum} already exists
+                          </p>
+                        )}
+                      </PropRow>
+                      <PropRow label={`Elevation (${currentUnit === 'SI' ? 'm' : 'ft'})`} noBorder>
+                        <NumericInput
+                          id="elev"
+                          value={formData.elevation}
+                          onValueChange={(v) => handleChange('elevation', v)}
+                          className="h-7 text-[12px] font-medium text-black border-slate-300"
+                          style={{ fontFamily: 'Poppins, sans-serif' } as any}
+                        />
+                      </PropRow>
+                    </PropSection>
+
+                    {/* Boundary Condition section */}
+                    <PropSection title="Boundary Condition">
+                      <PropRow label="Mode" noBorder>
+                        <div className="flex items-center gap-1 rounded-full border-2 border-slate-300 bg-white overflow-hidden shadow-sm w-fit">
+                          <button
+                            type="button"
+                            onClick={() => handleChange('mode', 'fixed')}
+                            className={`text-[11px] font-bold px-3 py-0.5 transition-colors whitespace-nowrap ${(formData.mode || 'fixed') === 'fixed' ? 'bg-blue-600 text-white' : 'text-black hover:bg-slate-50'}`}
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                          >Fixed HW</button>
+                          <button
+                            type="button"
+                            onClick={() => handleChange('mode', 'schedule')}
+                            className={`text-[11px] font-bold px-3 py-0.5 transition-colors whitespace-nowrap ${formData.mode === 'schedule' ? 'bg-blue-600 text-white' : 'text-black hover:bg-slate-50'}`}
+                            style={{ fontFamily: 'Poppins, sans-serif' }}
+                          >H Schedule</button>
+                        </div>
+                      </PropRow>
+                    </PropSection>
+
+                    {/* Fixed elevation or schedule */}
+                    {(formData.mode || 'fixed') === 'fixed' && (
+                      <PropSection title="Head Water">
+                        <PropRow label={`Reservoir Elev HW (${currentUnit === 'SI' ? 'm' : 'ft'})`} noBorder>
+                          <NumericInput
+                            id="resElev"
+                            value={formData.reservoirElevation}
+                            onValueChange={(v) => handleChange('reservoirElevation', v)}
+                            className="h-7 text-[12px] font-medium text-black border-slate-300"
+                            style={{ fontFamily: 'Poppins, sans-serif' } as any}
+                          />
+                        </PropRow>
+                      </PropSection>
+                    )}
+
+                    {formData.mode === 'schedule' && (
+                      <PropSection title="H Schedule">
+                        <PropRow label="Schedule Number">
+                          <Select
+                            value={(formData.hScheduleNumber || 1).toString()}
+                            onValueChange={(v) => {
+                              if (v === 'add-new') {
+                                const maxSched = hSchedules.length > 0 ? Math.max(...hSchedules.map(s => s.number)) : 5;
+                                const newNum = maxSched + 1;
+                                addHSchedule(newNum);
+                                handleChange('hScheduleNumber', newNum);
+                                return;
+                              }
+                              const num = parseInt(v);
+                              addHSchedule(num);
+                              handleChange('hScheduleNumber', num);
+                            }}
+                          >
+                            <SelectTrigger id="hScheduleNum" className="h-7 text-[12px] font-medium text-black border-slate-300">
+                              <SelectValue placeholder="Select schedule" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Array.from({ length: Math.max(5, ...hSchedules.map(s => s.number)) }, (_, i) => i + 1).map(num => (
+                                <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
+                              ))}
+                              <Separator className="my-1" />
+                              <SelectItem value="add-new" className="text-primary font-medium cursor-pointer">+ Add New Schedule</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </PropRow>
+                        <div className="px-3 pt-2 pb-3 space-y-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[11px] font-semibold text-black uppercase tracking-wide" style={{ fontFamily: 'Poppins, sans-serif' }}>T / H Pairs</span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const schedNum = formData.hScheduleNumber || 1;
+                                const currentSched = hSchedules.find(s => s.number === schedNum);
+                                const points = currentSched ? [...currentSched.points] : [];
+                                updateHSchedule(schedNum, [...points, { time: 0, head: 0 }]);
+                              }}
+                              className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+                              style={{ fontFamily: 'Poppins, sans-serif' }}
+                            >
+                              <Plus className="h-3 w-3" /> Add Pair
+                            </button>
+                          </div>
+                          {(hSchedules.find(s => s.number === (formData.hScheduleNumber || 1))?.points || []).map((point, index) => (
+                            <div key={index} className="flex items-center gap-2 p-2 border border-slate-200 rounded-md bg-slate-50 relative group">
+                              <div className="flex-1">
+                                <div className="text-[10px] font-medium text-black mb-0.5" style={{ fontFamily: 'Poppins, sans-serif' }}>Time (T)</div>
+                                <NumericInput
+                                  className="h-6 text-[11px] font-medium text-black border-slate-300"
+                                  value={point.time}
+                                  onValueChange={(v) => {
+                                    const schedNum = formData.hScheduleNumber || 1;
+                                    const currentSched = hSchedules.find(s => s.number === schedNum);
+                                    if (currentSched) {
+                                      const newPoints = [...currentSched.points];
+                                      newPoints[index] = { ...newPoints[index], time: v as any };
+                                      updateHSchedule(schedNum, newPoints);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <div className="flex-1">
+                                <div className="text-[10px] font-medium text-black mb-0.5" style={{ fontFamily: 'Poppins, sans-serif' }}>Head ({currentUnit === 'SI' ? 'm' : 'ft'})</div>
+                                <NumericInput
+                                  className="h-6 text-[11px] font-medium text-black border-slate-300"
+                                  value={point.head}
+                                  onValueChange={(v) => {
+                                    const schedNum = formData.hScheduleNumber || 1;
+                                    const currentSched = hSchedules.find(s => s.number === schedNum);
+                                    if (currentSched) {
+                                      const newPoints = [...currentSched.points];
+                                      newPoints[index] = { ...newPoints[index], head: v as any };
+                                      updateHSchedule(schedNum, newPoints);
+                                    }
+                                  }}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                className="opacity-0 group-hover:opacity-100 transition-opacity text-red-500 hover:text-red-700 p-1"
+                                onClick={() => {
+                                  const schedNum = formData.hScheduleNumber || 1;
+                                  const currentSched = hSchedules.find(s => s.number === schedNum);
+                                  if (currentSched) {
+                                    updateHSchedule(schedNum, currentSched.points.filter((_, i) => i !== index));
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                          {(!hSchedules.find(s => s.number === (formData.hScheduleNumber || 1))?.points?.length) && (
+                            <p className="text-[11px] text-black text-center py-2 italic" style={{ fontFamily: 'Poppins, sans-serif' }}>No T/H pairs added.</p>
+                          )}
+                        </div>
+                      </PropSection>
+                    )}
+                  </>
+                );
+              })()}
+
+              {/* Non-reservoir: elevation + legacy reservoir fields (kept for non-reservoir use) */}
+              {element.data?.type !== 'reservoir' && (
               <div className="grid gap-2">
                 <Label htmlFor="elev">{element.data?.type === 'surgeTank' ? 'Node Elevation' : 'Elevation'} ({currentUnit === 'SI' ? 'm' : 'ft'})</Label>
                 <NumericInput 
@@ -779,150 +1038,6 @@ export function PropertiesPanel() {
                   onValueChange={(v) => handleChange('elevation', v)} 
                 />
               </div>
-
-              {element.data?.type === 'reservoir' && (
-                <div className="grid gap-2 mb-4">
-                  <Label>Boundary Condition Mode</Label>
-                  <RadioGroup 
-                    value={formData.mode || 'fixed'} 
-                    onValueChange={(v) => handleChange('mode', v)}
-                    className="flex gap-4"
-                  >
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="fixed" id="mode-fixed" />
-                      <Label htmlFor="mode-fixed">Fixed Elevation</Label>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <RadioGroupItem value="schedule" id="mode-schedule" />
-                      <Label htmlFor="mode-schedule">H Schedule</Label>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
-
-              {element.data?.type === 'reservoir' && (formData.mode || 'fixed') === 'fixed' && (
-                <div className="grid gap-2">
-                  <Label htmlFor="resElev">Reservoir Elevation (HW) ({currentUnit === 'SI' ? 'm' : 'ft'})</Label>
-                  <NumericInput 
-                    id="resElev" 
-                    value={formData.reservoirElevation} 
-                    onValueChange={(v) => handleChange('reservoirElevation', v)} 
-                  />
-                </div>
-              )}
-
-              {element.data?.type === 'reservoir' && formData.mode === 'schedule' && (
-                <div className="space-y-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="hScheduleNum">Schedule Number</Label>
-                    <Select 
-                      value={(formData.hScheduleNumber || 1).toString()} 
-                      onValueChange={(v) => {
-                        if (v === 'add-new') {
-                          const maxSched = hSchedules.length > 0 
-                            ? Math.max(...hSchedules.map(s => s.number)) 
-                            : 5;
-                          const newNum = maxSched + 1;
-                          addHSchedule(newNum);
-                          handleChange('hScheduleNumber', newNum);
-                          return;
-                        }
-                        const num = parseInt(v);
-                        addHSchedule(num);
-                        handleChange('hScheduleNumber', num);
-                      }}
-                    >
-                      <SelectTrigger id="hScheduleNum">
-                        <SelectValue placeholder="Select schedule" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {Array.from({ length: Math.max(5, ...hSchedules.map(s => s.number)) }, (_, i) => i + 1).map(num => (
-                          <SelectItem key={num} value={num.toString()}>{num}</SelectItem>
-                        ))}
-                        <Separator className="my-1" />
-                        <SelectItem value="add-new" className="text-primary font-medium cursor-pointer">
-                          + Add New Schedule
-                        </SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <Label className="text-sm font-medium">T/H Pairs</Label>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="h-7 px-2"
-                        onClick={() => {
-                          const schedNum = formData.hScheduleNumber || 1;
-                          const currentSched = hSchedules.find(s => s.number === schedNum);
-                          const points = currentSched ? [...currentSched.points] : [];
-                          updateHSchedule(schedNum, [...points, { time: 0, head: 0 }]);
-                        }}
-                      >
-                        Add Pair
-                      </Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {(hSchedules.find(s => s.number === (formData.hScheduleNumber || 1))?.points || []).map((point, index) => (
-                        <div key={index} className="flex items-end gap-2 p-2 border rounded-md bg-muted/30 relative group">
-                          <div className="grid gap-1 flex-1">
-                            <Label className="text-[10px]">Time (T)</Label>
-                            <NumericInput 
-                              className="h-7 text-xs"
-                              value={point.time}
-                              onValueChange={(v) => {
-                                const schedNum = formData.hScheduleNumber || 1;
-                                const currentSched = hSchedules.find(s => s.number === schedNum);
-                                if (currentSched) {
-                                  const newPoints = [...currentSched.points];
-                                  newPoints[index] = { ...newPoints[index], time: v as any };
-                                  updateHSchedule(schedNum, newPoints);
-                                }
-                              }}
-                            />
-                          </div>
-                          <div className="grid gap-1 flex-1">
-                            <Label className="text-[10px]">Head (H) ({currentUnit === 'SI' ? 'm' : 'ft'})</Label>
-                            <NumericInput 
-                              className="h-7 text-xs"
-                              value={point.head}
-                              onValueChange={(v) => {
-                                const schedNum = formData.hScheduleNumber || 1;
-                                const currentSched = hSchedules.find(s => s.number === schedNum);
-                                if (currentSched) {
-                                  const newPoints = [...currentSched.points];
-                                  newPoints[index] = { ...newPoints[index], head: v as any };
-                                  updateHSchedule(schedNum, newPoints);
-                                }
-                              }}
-                            />
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-7 w-7 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => {
-                              const schedNum = formData.hScheduleNumber || 1;
-                              const currentSched = hSchedules.find(s => s.number === schedNum);
-                              if (currentSched) {
-                                const newPoints = currentSched.points.filter((_, i) => i !== index);
-                                updateHSchedule(schedNum, newPoints);
-                              }
-                            }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                      {(!hSchedules.find(s => s.number === (formData.hScheduleNumber || 1))?.points || hSchedules.find(s => s.number === (formData.hScheduleNumber || 1))!.points.length === 0) && (
-                        <p className="text-[10px] text-muted-foreground text-center py-2 italic">No T/H pairs added.</p>
-                      )}
-                    </div>
-                  </div>
-                </div>
               )}
               {element.data?.type === 'flowBoundary' && (() => {
                 const activeSchedNum = Number(formData.scheduleNumber ?? element.data?.scheduleNumber ?? 1);
@@ -2154,30 +2269,33 @@ export function PropertiesPanel() {
           )}
         </div>
 
-      </CardContent>
+      </div>
 
-      {/* Fixed footer with Save/Delete */}
-      <div className="shrink-0 border-t border-border/50 bg-card px-6 py-4">
+      {/* ── Fixed footer: pill-shaped Save / Delete ── */}
+      <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3">
         <div className="flex gap-2">
-          <Button
-            variant="default"
-            className="flex-1 gap-2"
+          <button
             onClick={handleSave}
             disabled={!isDirty}
             data-testid="button-save-element"
+            className={`flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold transition-colors
+              ${isDirty
+                ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-sm'
+                : 'bg-slate-100 text-slate-400 cursor-not-allowed'}`}
+            style={{ fontFamily: 'Poppins, sans-serif' }}
           >
-            <Save className="h-4 w-4" />
+            <Save className="h-3.5 w-3.5" />
             Save
-          </Button>
-          <Button 
-            variant="destructive" 
-            className="flex-1 gap-2" 
+          </button>
+          <button
             onClick={() => selectedElementId && selectedElementType && deleteElement(selectedElementId, selectedElementType)}
             data-testid="button-delete-element"
+            className="flex-1 flex items-center justify-center gap-1.5 rounded-full py-2 text-[13px] font-semibold bg-red-500 hover:bg-red-600 text-white shadow-sm transition-colors"
+            style={{ fontFamily: 'Poppins, sans-serif' }}
           >
-            <Trash2 className="h-4 w-4" />
+            <Trash2 className="h-3.5 w-3.5" />
             Delete
-          </Button>
+          </button>
         </div>
       </div>
     </div>
