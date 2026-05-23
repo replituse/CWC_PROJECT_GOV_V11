@@ -1121,29 +1121,6 @@ function DesignerInner() {
                 )}
               </div>
 
-              {/* Node Selection Panel (Sidebar) */}
-              <div 
-                className={cn(
-                  "h-full border-l border-border bg-card shadow-2xl z-20 flex flex-col transition-all duration-300 ease-in-out overflow-hidden",
-                  showNodeSelection ? "w-[350px] opacity-100 visible" : "w-0 opacity-0 invisible"
-                )}
-              >
-                <div className="w-[350px] h-full">
-                  {showNodeSelection && <NodeSelectionPanel onSave={handleSave} />}
-                </div>
-              </div>
-
-              {/* Properties Panel (Sidebar) */}
-              <div 
-                className={cn(
-                  "h-full border-l border-border bg-card shadow-2xl z-20 flex flex-col transition-all duration-300 ease-in-out overflow-hidden",
-                  selectedElementId && !showNodeSelection ? "w-[350px] opacity-100 visible" : "w-0 opacity-0 invisible"
-                )}
-              >
-                <div className="w-[350px] h-full">
-                  {selectedElementId && !showNodeSelection && <PropertiesPanel />}
-                </div>
-              </div>
             </div>
           </ResizablePanel>
           
@@ -1348,6 +1325,20 @@ function DesignerInner() {
               <X className="w-4 h-4" />
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Node Selection Panel — fixed full-height overlay */}
+      {showNodeSelection && (
+        <div className="fixed right-0 top-0 h-screen w-[480px] z-50 bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-300">
+          <NodeSelectionPanel onSave={handleSave} />
+        </div>
+      )}
+
+      {/* Properties Panel — fixed full-height overlay */}
+      {selectedElementId && !showNodeSelection && (
+        <div className="fixed right-0 top-0 h-screen w-[480px] z-50 bg-white shadow-2xl border-l border-slate-200 flex flex-col animate-in slide-in-from-right duration-300">
+          <PropertiesPanel />
         </div>
       )}
     </div>
