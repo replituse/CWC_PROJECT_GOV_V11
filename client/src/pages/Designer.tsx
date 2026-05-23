@@ -485,16 +485,17 @@ function DesignerInner() {
     selectElement(edge.id, 'edge');
   }, [selectElement]);
 
-  // Selection change: ref guard blocks properties panel from opening in link mode
+  // Selection change: only handles deselection and edge selection.
+  // Node selection is handled exclusively by onNodeClick so that dragging
+  // a node does NOT pop the Properties panel open.
   const onSelectionChange = useCallback(({ nodes, edges }: { nodes: WhamoNode[], edges: WhamoEdge[] }) => {
     if (activeLinkToolRef.current) return;
-    if (nodes.length > 0) {
-      selectElement(nodes[0].id, 'node');
-    } else if (edges.length > 0) {
-      selectElement(edges[0].id, 'edge');
-    } else {
+    if (nodes.length === 0 && edges.length === 0) {
       selectElement(null, null);
+    } else if (nodes.length === 0 && edges.length > 0) {
+      selectElement(edges[0].id, 'edge');
     }
+    // node selection → handled by onNodeClick (avoids panel open during drag)
   }, [selectElement]);
 
   useEffect(() => {

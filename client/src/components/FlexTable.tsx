@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { X, Filter, Check, Plus, Trash2, Download } from 'lucide-react';
+import { X, Check, Plus, Trash2 } from 'lucide-react';
 import { exportTabToExcel, TAB_COLS, type FilterKey as ExcelFilterKey, type ExportRow } from '@/lib/excel-io';
 
 interface FlexTableProps {
@@ -56,16 +56,16 @@ const NODE_TYPE_LABEL: Record<string, string> = {
   conduit: 'Conduit', dummy: 'Dummy Pipe',
 };
 const TYPE_BADGE: Record<string, string> = {
-  reservoir:    'bg-blue-100 text-blue-700 border-blue-200',
-  node:         'bg-slate-100 text-slate-600 border-slate-200',
-  junction:     'bg-red-100 text-red-700 border-red-200',
-  surgeTank:    'bg-orange-100 text-orange-700 border-orange-200',
-  flowBoundary: 'bg-green-100 text-green-700 border-green-200',
-  pump:         'bg-orange-100 text-orange-600 border-orange-300',
-  checkValve:   'bg-violet-100 text-violet-700 border-violet-200',
-  turbine:      'bg-teal-100 text-teal-700 border-teal-200',
-  conduit:      'bg-indigo-100 text-indigo-700 border-indigo-200',
-  dummy:        'bg-purple-100 text-purple-700 border-purple-200',
+  reservoir:    'bg-blue-600 text-white',
+  node:         'bg-slate-600 text-white',
+  junction:     'bg-red-500 text-white',
+  surgeTank:    'bg-orange-500 text-white',
+  flowBoundary: 'bg-green-600 text-white',
+  pump:         'bg-orange-600 text-white',
+  checkValve:   'bg-violet-600 text-white',
+  turbine:      'bg-teal-600 text-white',
+  conduit:      'bg-indigo-600 text-white',
+  dummy:        'bg-purple-600 text-white',
 };
 
 const FILTER_CHIPS: { key: FilterKey; label: string }[] = [
@@ -120,7 +120,7 @@ interface PairsEditorState {
 function NACell({ minW = 'min-w-[80px]' }: { minW?: string }) {
   return (
     <td className={cn('border-r border-slate-200 px-2 py-[7px] bg-slate-50/60', minW)}>
-      <span className="text-xs text-slate-700 italic select-none">NA</span>
+      <span className="text-[13px] text-black italic select-none">NA</span>
     </td>
   );
 }
@@ -245,7 +245,7 @@ function EditableCell({ value, type = 'text', onChange, readOnly, dimmed, testId
         <input
           ref={inputRef}
           data-testid={testId}
-          className="w-full h-[30px] px-2 text-xs border-0 outline-none ring-1 ring-blue-500 ring-inset bg-white"
+          className="w-full h-[30px] px-2 text-[13px] border-0 outline-none ring-1 ring-blue-500 ring-inset bg-white"
           type="text"
           inputMode={type === 'number' ? 'decimal' : 'text'}
           value={localVal}
@@ -254,7 +254,7 @@ function EditableCell({ value, type = 'text', onChange, readOnly, dimmed, testId
           onKeyDown={handleKeyDown}
         />
       ) : (
-        <span className="block px-2 py-[7px] text-xs truncate">{display}</span>
+        <span className="block px-2 py-[7px] text-[13px] truncate">{display}</span>
       )}
     </td>
   );
@@ -276,7 +276,7 @@ function SelectCell({ value, options, onChange, dimmed, testId, minW = 'min-w-[1
         <SelectTrigger
           data-testid={testId}
           disabled={!onChange}
-          className="h-[30px] border-0 rounded-none bg-transparent text-xs focus:ring-1 focus:ring-blue-400 focus:ring-inset w-full px-2"
+          className="h-[30px] border-0 rounded-none bg-transparent text-[13px] focus:ring-1 focus:ring-blue-400 focus:ring-inset w-full px-2"
         >
           <SelectValue />
         </SelectTrigger>
@@ -313,7 +313,7 @@ function BoolCell({ value, onChange, trueLabel = 'Yes', falseLabel = 'No', dimme
           <Check className="h-3 w-3" />{trueLabel}
         </span>
       ) : (
-        <span className="text-[10px] text-slate-400">{falseLabel}</span>
+        <span className="text-[10px] text-black">{falseLabel}</span>
       )}
     </td>
   );
@@ -343,23 +343,20 @@ function UnitToggleCell({ rowId, rowKind, effectiveUnit, globalUnit, onSetUnit }
   const isOverridden = (effectiveUnit !== globalUnit);
   return (
     <td className="border-r border-slate-200 px-1.5 py-[5px] min-w-[84px]">
-      <div className={cn(
-        'inline-flex items-center border rounded overflow-hidden text-[10px] h-[22px]',
-        isOverridden ? 'border-amber-400' : 'border-slate-200'
-      )}>
+      <div className={cn('inline-flex items-center gap-0.5', isOverridden && 'ring-1 ring-amber-400 rounded-full px-0.5')}>
         <button
           data-testid={`cell-unit-si-${rowId}`}
           className={cn(
-            'px-2 h-full font-semibold transition-colors',
-            effectiveUnit === 'SI' ? 'bg-[#1a73e8] text-white' : 'text-slate-500 hover:bg-slate-50'
+            'px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors',
+            effectiveUnit === 'SI' ? 'bg-[#1a73e8] text-white' : 'bg-slate-100 text-black hover:bg-slate-200'
           )}
           onClick={e => { e.stopPropagation(); onSetUnit(rowId, rowKind, 'SI'); }}
         >SI</button>
         <button
           data-testid={`cell-unit-fps-${rowId}`}
           className={cn(
-            'px-2 h-full font-semibold border-l border-slate-200 transition-colors',
-            effectiveUnit === 'FPS' ? 'bg-[#1a73e8] text-white' : 'text-slate-500 hover:bg-slate-50'
+            'px-2 py-0.5 rounded-full text-[10px] font-semibold transition-colors',
+            effectiveUnit === 'FPS' ? 'bg-[#1a73e8] text-white' : 'bg-slate-100 text-black hover:bg-slate-200'
           )}
           onClick={e => { e.stopPropagation(); onSetUnit(rowId, rowKind, 'FPS'); }}
         >FPS</button>
@@ -641,7 +638,7 @@ function RowCells({
     );
     case 'type': return (
       <td key={col} className="border-r border-slate-200 px-2 py-1 min-w-[100px]">
-        <span className={cn('inline-block px-1.5 py-0.5 rounded border text-[10px] font-semibold whitespace-nowrap', TYPE_BADGE[row.subType] || 'bg-slate-100 text-slate-600 border-slate-200')}>
+        <span className={cn('inline-block px-2.5 py-0.5 rounded-full text-[11px] font-semibold whitespace-nowrap', TYPE_BADGE[row.subType] || 'bg-slate-600 text-white')}>
           {NODE_TYPE_LABEL[row.subType] || row.subType}
         </span>
       </td>
@@ -1091,8 +1088,8 @@ function UnifiedTable({
   }
 
   return (
-    <div className="overflow-auto flex-1 border border-slate-200 rounded bg-white shadow-sm">
-      <table className="min-w-max w-full border-collapse text-xs">
+    <div className="overflow-auto flex-1">
+      <table className="min-w-max w-full border-collapse text-[13px]" style={{ fontFamily: 'Poppins, sans-serif', fontWeight: 500 }}>
         <thead className="sticky top-0 z-10 bg-[#1a73e8]">
           <tr>
             {cols.map(col => <ColHeader key={col} col={col} unit={unit} />)}
@@ -1407,21 +1404,21 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
           <DialogHeader className="px-5 py-2.5 border-b bg-white flex-none shadow-sm">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
-                <DialogTitle className="text-sm font-bold text-slate-800">Flex Table</DialogTitle>
-                <span className="text-xs text-slate-400">
+                <DialogTitle className="text-base font-bold text-black" style={{ fontFamily: 'Poppins, sans-serif' }}>Flex Table</DialogTitle>
+                <span className="text-xs text-black">
                   {nodes.length} node{nodes.length !== 1 ? 's' : ''} · {edges.length} pipe{edges.length !== 1 ? 's' : ''}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="flex items-center border border-slate-200 rounded overflow-hidden text-xs h-7">
+                <div className="flex items-center gap-1 text-xs">
                   <button
                     data-testid="flextable-unit-si"
-                    className={cn('px-3 h-full font-semibold transition-colors', globalUnit === 'SI' ? 'bg-[#1a73e8] text-white' : 'text-slate-600 hover:bg-slate-50')}
+                    className={cn('px-3 py-1 rounded-full font-semibold transition-colors', globalUnit === 'SI' ? 'bg-[#1a73e8] text-white' : 'bg-slate-100 text-black hover:bg-slate-200')}
                     onClick={() => setGlobalUnit('SI')}
                   >SI</button>
                   <button
                     data-testid="flextable-unit-fps"
-                    className={cn('px-3 h-full font-semibold transition-colors border-l border-slate-200', globalUnit === 'FPS' ? 'bg-[#1a73e8] text-white' : 'text-slate-600 hover:bg-slate-50')}
+                    className={cn('px-3 py-1 rounded-full font-semibold transition-colors', globalUnit === 'FPS' ? 'bg-[#1a73e8] text-white' : 'bg-slate-100 text-black hover:bg-slate-200')}
                     onClick={() => setGlobalUnit('FPS')}
                   >FPS</button>
                 </div>
@@ -1493,8 +1490,7 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
           </DialogHeader>
 
           {/* ── Filter chips ── */}
-          <div className="flex items-center gap-1.5 px-5 py-2 border-b bg-slate-50 flex-none flex-wrap">
-            <Filter className="w-3.5 h-3.5 text-slate-400 shrink-0 mr-1" />
+          <div className="flex items-center gap-1.5 px-5 py-2 border-b bg-white flex-none flex-wrap">
             {visibleChips.map(chip => {
               const active = activeFilter === chip.key;
               return (
@@ -1504,13 +1500,13 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
                   onClick={() => setActiveFilter(chip.key)}
                   className={cn(
                     'inline-flex items-center gap-1 px-2.5 py-1 rounded-full border text-[11px] font-medium transition-all',
-                    active ? 'bg-[#1a73e8] text-white border-[#1a73e8]' : 'bg-white text-slate-600 border-slate-200 hover:border-slate-400'
+                    active ? 'bg-[#1a73e8] text-white border-[#1a73e8]' : 'bg-white text-black border-slate-200 hover:border-slate-400'
                   )}
                 >
                   {chip.label}
                   <span className={cn(
                     'inline-flex items-center justify-center rounded-full text-[9px] font-bold min-w-[16px] h-4 px-1',
-                    active ? 'bg-white/25 text-white' : 'bg-slate-100 text-slate-500'
+                    active ? 'bg-white/25 text-white' : 'bg-slate-100 text-black'
                   )}>
                     {counts[chip.key as keyof typeof counts]}
                   </span>
@@ -1518,30 +1514,14 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
               );
             })}
             {activeFilter !== 'all' && (
-              <button className="text-[11px] text-slate-400 hover:text-slate-600 ml-1 underline" onClick={() => setActiveFilter('all')}>
+              <button className="text-[11px] text-black ml-1 hover:text-slate-600 underline" onClick={() => setActiveFilter('all')}>
                 Clear
               </button>
             )}
-
-            {/* ── Export button ── */}
-            <div className="flex items-center gap-1.5 ml-auto shrink-0">
-              <Button
-                variant="outline"
-                size="sm"
-                className="h-7 text-[11px] gap-1.5 border-[#1a73e8] text-[#1a73e8] hover:bg-blue-50"
-                onClick={handleExport}
-                disabled={isExporting || filteredRows.length === 0}
-                data-testid="btn-excel-export"
-                title={`Export current ${tabLabel} tab to Excel`}
-              >
-                <Download className="h-3.5 w-3.5" />
-                {isExporting ? 'Exporting…' : 'Export Excel'}
-              </Button>
-            </div>
           </div>
 
           {/* ── Table ── */}
-          <div className="flex-1 overflow-hidden flex flex-col px-4 py-3 gap-2 bg-slate-50/70">
+          <div className="flex-1 overflow-hidden flex flex-col px-4 py-3 gap-2 bg-white">
             <UnifiedTable
               rows={filteredRows} filter={activeFilter} unit={globalUnit} hSchedules={hSchedules ?? []}
               qSchedules={qSchedules ?? {}}
@@ -1552,7 +1532,7 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
               onOpenPairsEditor={handleOpenPairsEditor}
               onSetUnit={setElementUnit}
             />
-            <p className="text-[10px] text-slate-400 flex-none">
+            <p className="text-[10px] text-black flex-none">
               Showing {filteredRows.length} of {allRows.length} elements ·
               Click any white cell to edit · Dimmed cells are read-only for that element type ·
               Turbine V Schedule (T/G pairs) editable inline when mode is TURBGOV or EMERGENCY ·

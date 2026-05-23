@@ -96,13 +96,13 @@ export const ConnectionEdge = memo(({
         >
           <TooltipWrapper content={<DataList data={displayData} title={tooltipTitle} />}>
             {isElementEdge ? (
-              <div style={{ cursor: 'help' }}>
+              <div style={{ cursor: 'default' }}>
                 {isPump && <ElementCircle icon={waterPumpIcon} alt="Pump" label={edgeLabel} />}
                 {isCheckValve && <ElementCircle icon={pipeIcon} alt="Check Valve" label={edgeLabel} />}
                 {isTurbine && <ElementCircle icon={turbineImgIcon} alt="Turbine" label={edgeLabel} />}
               </div>
             ) : (
-              <div className="bg-white px-2 py-0.5 rounded-full border border-black text-[11px] font-semibold text-black cursor-help hover:bg-slate-50 transition-colors">
+              <div className="bg-white px-2 py-0.5 rounded-full border border-black text-[11px] font-semibold text-black cursor-default hover:bg-slate-50 transition-colors">
                 {(displayData?.label as ReactNode) || id}
               </div>
             )}
