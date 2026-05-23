@@ -74,6 +74,8 @@ import inputIcon from "@assets/input_1779526391855.png";
 import outputIcon from "@assets/output_1779526416694.png";
 import gridIcon from "@assets/grid_1779526458342.png";
 import fullscreenIcon from "@assets/fullscreen_1779526488758.png";
+import eyeOpenIcon from "@assets/view_(2)_1779527800443.png";
+import eyeHiddenIcon from "@assets/hidden_1779527819493.png";
 
 // ─── Title bar compact button ─────────────────────────────────────────────────
 function TitleBarBtn({
@@ -208,13 +210,13 @@ function RibbonGroup({ label, children, flex = 1 }: { label: string; children: R
     <div className="flex items-stretch" style={{ flex }}>
       <div className="flex flex-col w-full">
         <div className="text-center pt-1 pb-0.5">
-          <span className="text-[10px] text-slate-500 font-semibold tracking-wider uppercase" style={{ fontFamily: 'Poppins, sans-serif' }}>{label}</span>
+          <span className="text-[11px] text-black font-medium tracking-wide uppercase" style={{ fontFamily: 'Poppins, sans-serif' }}>{label}</span>
         </div>
         <div className="flex items-stretch justify-evenly px-1 pb-1 pt-0 flex-1">
           {children}
         </div>
       </div>
-      <div className="w-px bg-slate-200 my-1 self-stretch flex-shrink-0" />
+      <div className="w-px bg-black my-1 self-stretch flex-shrink-0" />
     </div>
   );
 }
@@ -572,12 +574,12 @@ export function Header({
         <RibbonGroup label="Analysis" flex={2}>
           <InlineRibbonBtn
             imgSrc={settingsWrenchIcon}
-            label="Comp. Params"
+            label="Parameters"
             onClick={() => setShowCompParams(true)}
           />
           <InlineRibbonBtn
             imgSrc={equalizerIcon}
-            label="Output Req."
+            label="Configure"
             onClick={() => { setGenerateDialogMode(null); setShowOutputDialog(true); }}
           />
         </RibbonGroup>
@@ -600,9 +602,11 @@ export function Header({
 
         <RibbonGroup label="View" flex={2}>
           <InlineRibbonBtn
-            imgSrc={gridIcon}
-            label="Grid"
-            onClick={() => window.dispatchEvent(new CustomEvent('toggle-grid'))}
+            imgSrc={showHoverData ? eyeOpenIcon : eyeHiddenIcon}
+            label={showHoverData ? "Hide Labels" : "Show Labels"}
+            onClick={() => setShowHoverData(!showHoverData)}
+            active={showHoverData}
+            data-testid="ribbon-btn-toggle-labels"
           />
           <InlineRibbonBtn
             imgSrc={fullscreenIcon}
