@@ -1,5 +1,4 @@
 import { Handle, Position, NodeProps } from '@xyflow/react';
-import { clsx } from 'clsx';
 import { memo } from 'react';
 import { TooltipWrapper, DataList } from './TooltipWrapper';
 import { useNetworkStore } from '@/lib/store';
@@ -12,16 +11,34 @@ import turbineImgIcon from '@assets/turbine_1779523517554.png';
 import windIcon from '@assets/wind_1779523398812.png';
 
 const HandleStyle = "w-2 h-2 bg-black border border-white opacity-0 group-hover:opacity-100 transition-opacity";
+const CIRCLE_SIZE = 56;
+const ICON_SIZE = 32;
 
 function useNodeOrderError(id: string) {
   return useNetworkStore(state => state.nodeOrderErrorIds.includes(id));
 }
 
-// Node size constants
-const CIRCLE_SIZE = 56;
-const ICON_SIZE = 32;
+// Detect which directions already have connections on this node,
+// then return the first free direction for the label.
+function useLabelPosition(nodeId: string): 'bottom' | 'top' | 'right' | 'left' {
+  const edges = useNetworkStore(state => state.edges);
+  const usedHandles = new Set<string>();
+  edges.forEach(edge => {
+    if (edge.source === nodeId) usedHandles.add(edge.sourceHandle || '');
+    if (edge.target === nodeId) usedHandles.add(edge.targetHandle || '');
+  });
+  const hasBottom = usedHandles.has('s-bottom') || usedHandles.has('t-bottom');
+  const hasTop    = usedHandles.has('s-top')    || usedHandles.has('t-top');
+  const hasRight  = usedHandles.has('s-right')  || usedHandles.has('t-right');
+  const hasLeft   = usedHandles.has('s-left')   || usedHandles.has('t-left');
 
-// Shared circle style — all black
+  if (!hasBottom) return 'bottom';
+  if (!hasRight)  return 'right';
+  if (!hasTop)    return 'top';
+  if (!hasLeft)   return 'left';
+  return 'bottom';
+}
+
 function circleStyle(selected: boolean, hasOrderError: boolean): React.CSSProperties {
   return {
     width: CIRCLE_SIZE,
@@ -32,87 +49,81 @@ function circleStyle(selected: boolean, hasOrderError: boolean): React.CSSProper
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
+    position: 'absolute',
+    inset: 0,
     transition: 'all 0.15s',
     boxShadow: selected ? '0 0 0 3px rgba(0,0,0,0.15)' : undefined,
-    flexShrink: 0,
   };
 }
 
-// Wrapper that fixes the bounding box to circle size only — label floats outside via absolute
-function IconNode({
-  circleContent,
-  label,
-  handles,
+// Build label style based on which direction is free
+function labelStyle(pos: 'bottom' | 'top' | 'right' | 'left'): React.CSSProperties {
+  const base: React.CSSProperties = {
+    position: 'absolute',
+    fontSize: 13,
+    fontWeight: 700,
+    color: '#000',
+    whiteSpace: 'nowrap',
+    pointerEvents: 'none',
+    userSelect: 'none',
+    lineHeight: 1,
+  };
+  if (pos === 'bottom') return { ...base, top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: 5 };
+  if (pos === 'top')    return { ...base, bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: 5 };
+  if (pos === 'right')  return { ...base, left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: 8 };
+  return                        { ...base, right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: 8 };
+}
+
+const AllHandles = () => (
+  <>
+    <Handle type="target" id="t-top"    position={Position.Top}    className={HandleStyle} />
+    <Handle type="source" id="s-top"    position={Position.Top}    className={HandleStyle} />
+    <Handle type="target" id="t-bottom" position={Position.Bottom} className={HandleStyle} />
+    <Handle type="source" id="s-bottom" position={Position.Bottom} className={HandleStyle} />
+    <Handle type="target" id="t-left"   position={Position.Left}   className={HandleStyle} />
+    <Handle type="source" id="s-left"   position={Position.Left}   className={HandleStyle} />
+    <Handle type="target" id="t-right"  position={Position.Right}  className={HandleStyle} />
+    <Handle type="source" id="s-right"  position={Position.Right}  className={HandleStyle} />
+  </>
+);
+
+// Generic icon node with smart label placement
+function SmartIconNode({
+  nodeId, selected, hasOrderError, icon, label, alt,
 }: {
-  circleContent: React.ReactNode;
-  label: React.ReactNode;
-  handles: React.ReactNode;
+  nodeId: string; selected: boolean; hasOrderError: boolean;
+  icon: string; label: React.ReactNode; alt: string;
 }) {
+  const pos = useLabelPosition(nodeId);
   return (
     <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE }} className="group">
-      {circleContent}
-      {handles}
-      <span style={{
-        position: 'absolute',
-        top: '100%',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        marginTop: 5,
-        fontSize: 13,
-        fontWeight: 700,
-        color: '#000',
-        whiteSpace: 'nowrap',
-        pointerEvents: 'none',
-        userSelect: 'none',
-        lineHeight: 1,
-      }}>
-        {label}
-      </span>
+      <div style={circleStyle(selected, hasOrderError)}>
+        <img src={icon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt={alt} />
+      </div>
+      <AllHandles />
+      <span style={labelStyle(pos)}>{label}</span>
     </div>
   );
 }
-
-const AllHandles = ({ color = '#000' }: { color?: string }) => (
-  <>
-    <Handle type="target" id="t-top" position={Position.Top} className={HandleStyle} style={{ background: color }} />
-    <Handle type="source" id="s-top" position={Position.Top} className={HandleStyle} style={{ background: color }} />
-    <Handle type="target" id="t-bottom" position={Position.Bottom} className={HandleStyle} style={{ background: color }} />
-    <Handle type="source" id="s-bottom" position={Position.Bottom} className={HandleStyle} style={{ background: color }} />
-    <Handle type="target" id="t-left" position={Position.Left} className={HandleStyle} style={{ background: color }} />
-    <Handle type="source" id="s-left" position={Position.Left} className={HandleStyle} style={{ background: color }} />
-    <Handle type="target" id="t-right" position={Position.Right} className={HandleStyle} style={{ background: color }} />
-    <Handle type="source" id="s-right" position={Position.Right} className={HandleStyle} style={{ background: color }} />
-  </>
-);
 
 // Reservoir Node
 export const ReservoirNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Reservoir Properties" />}>
-      <IconNode
-        label={data.label as React.ReactNode}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={damIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Reservoir" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={damIcon} label={data.label as React.ReactNode} alt="Reservoir" />
     </TooltipWrapper>
   );
 });
 
-// Basic Node (Simple Node)
+// Basic Node (Simple Node) — text inside, no external label
 export const SimpleNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Node Properties" />}>
       <div style={{ position: 'relative', width: CIRCLE_SIZE, height: CIRCLE_SIZE }} className="group">
@@ -132,18 +143,10 @@ export const JunctionNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Junction Properties" />}>
-      <IconNode
-        label={`J${data.nodeNumber as React.ReactNode}`}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={yIntersectionIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Junction" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={yIntersectionIcon} label={`J${data.nodeNumber}`} alt="Junction" />
     </TooltipWrapper>
   );
 });
@@ -153,18 +156,10 @@ export const SurgeTankNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Surge Tank Properties" />}>
-      <IconNode
-        label={data.label as React.ReactNode}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={waterTankIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Surge Tank" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={waterTankIcon} label={data.label as React.ReactNode} alt="Surge Tank" />
     </TooltipWrapper>
   );
 });
@@ -174,18 +169,10 @@ export const PumpNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Pump Properties" />}>
-      <IconNode
-        label={data.label as React.ReactNode}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={waterPumpIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Pump" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={waterPumpIcon} label={data.label as React.ReactNode} alt="Pump" />
     </TooltipWrapper>
   );
 });
@@ -195,18 +182,10 @@ export const CheckValveNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Check Valve Properties" />}>
-      <IconNode
-        label={data.label as React.ReactNode}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={pipeIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Check Valve" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={pipeIcon} label={data.label as React.ReactNode} alt="Check Valve" />
     </TooltipWrapper>
   );
 });
@@ -216,18 +195,10 @@ export const TurbineNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Turbine Properties" />}>
-      <IconNode
-        label={data.label as React.ReactNode}
-        handles={<AllHandles />}
-        circleContent={
-          <div style={circleStyle(!!selected, hasOrderError)}>
-            <img src={turbineImgIcon} style={{ width: ICON_SIZE, height: ICON_SIZE, objectFit: 'contain', pointerEvents: 'none' }} alt="Turbine" />
-          </div>
-        }
-      />
+      <SmartIconNode nodeId={id} selected={!!selected} hasOrderError={hasOrderError}
+        icon={turbineImgIcon} label={data.label as React.ReactNode} alt="Turbine" />
     </TooltipWrapper>
   );
 });
@@ -237,7 +208,6 @@ export const FlowBoundaryNode = memo(({ id, data, selected }: NodeProps) => {
   const node = useNetworkStore(state => state.nodes.find(n => n.id === id));
   const displayData = node ? node.data : data;
   const hasOrderError = useNodeOrderError(id);
-
   return (
     <TooltipWrapper content={<DataList data={displayData} title="Flow Boundary Properties" />}>
       <div
@@ -255,14 +225,14 @@ export const FlowBoundaryNode = memo(({ id, data, selected }: NodeProps) => {
           minWidth: 60,
         }}
       >
-        <Handle type="target" id="t-top" position={Position.Top} className={HandleStyle} />
-        <Handle type="source" id="s-top" position={Position.Top} className={HandleStyle} />
+        <Handle type="target" id="t-top"    position={Position.Top}    className={HandleStyle} />
+        <Handle type="source" id="s-top"    position={Position.Top}    className={HandleStyle} />
         <Handle type="target" id="t-bottom" position={Position.Bottom} className={HandleStyle} />
         <Handle type="source" id="s-bottom" position={Position.Bottom} className={HandleStyle} />
-        <Handle type="target" id="t-left" position={Position.Left} className={HandleStyle} />
-        <Handle type="source" id="s-left" position={Position.Left} className={HandleStyle} />
-        <Handle type="target" id="t-right" position={Position.Right} className={HandleStyle} />
-        <Handle type="source" id="s-right" position={Position.Right} className={HandleStyle} />
+        <Handle type="target" id="t-left"   position={Position.Left}   className={HandleStyle} />
+        <Handle type="source" id="s-left"   position={Position.Left}   className={HandleStyle} />
+        <Handle type="target" id="t-right"  position={Position.Right}  className={HandleStyle} />
+        <Handle type="source" id="s-right"  position={Position.Right}  className={HandleStyle} />
         <img src={windIcon} style={{ width: 28, height: 28, objectFit: 'contain', pointerEvents: 'none' }} alt="Flow BC" />
         <div style={{ fontSize: 12, fontWeight: 700, color: '#000', lineHeight: 1 }}>
           {data.label as React.ReactNode}
