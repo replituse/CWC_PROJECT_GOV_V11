@@ -1,8 +1,7 @@
 import { useNetworkStore } from '@/lib/store';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { CheckCircle2, X } from 'lucide-react';
+import { Save, X } from 'lucide-react';
 import { PropSection } from '@/components/ui/prop-section';
 
 interface NodeSelectionPanelProps {
@@ -108,54 +107,52 @@ export function NodeSelectionPanel({ onSave, onClose }: NodeSelectionPanelProps)
 
         {/* Node list section */}
         <PropSection title={`Network Nodes (${nodesList.length})`}>
-          <ScrollArea className="max-h-[420px]">
-            <div className="divide-y divide-slate-100 pb-3">
-              {nodesList.map(node => {
-                const isSelected = nodeSelectionSet.has(node.id);
-                return (
-                  <div
-                    key={node.id}
-                    className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors select-none ${
-                      isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'
-                    }`}
-                    onClick={() => toggleNodeSelection(node.id)}
-                    data-testid={`node-item-${node.id}`}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => toggleNodeSelection(node.id)}
-                      className="h-4 w-4 shrink-0"
-                      onClick={e => e.stopPropagation()}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className="text-[12px] font-semibold text-black leading-tight"
-                        style={{ fontFamily: 'Poppins, sans-serif' }}
-                      >
-                        Node {node.id}
-                      </p>
-                      <p
-                        className="text-[11px] text-slate-500 truncate mt-0.5"
-                        style={{ fontFamily: 'Poppins, sans-serif' }}
-                      >
-                        {node.label} — Elev: {node.elevation}
-                      </p>
-                    </div>
+          <div className="divide-y divide-slate-100">
+            {nodesList.map(node => {
+              const isSelected = nodeSelectionSet.has(node.id);
+              return (
+                <div
+                  key={node.id}
+                  className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors select-none ${
+                    isSelected ? 'bg-blue-50' : 'hover:bg-slate-50'
+                  }`}
+                  onClick={() => toggleNodeSelection(node.id)}
+                  data-testid={`node-item-${node.id}`}
+                >
+                  <Checkbox
+                    checked={isSelected}
+                    onCheckedChange={() => toggleNodeSelection(node.id)}
+                    className="h-4 w-4 shrink-0"
+                    onClick={e => e.stopPropagation()}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="text-[12px] font-semibold text-black leading-tight"
+                      style={{ fontFamily: 'Poppins, sans-serif' }}
+                    >
+                      Node {node.id}
+                    </p>
+                    <p
+                      className="text-[11px] text-slate-500 truncate mt-0.5"
+                      style={{ fontFamily: 'Poppins, sans-serif' }}
+                    >
+                      {node.label} — Elev: {node.elevation}
+                    </p>
                   </div>
-                );
-              })}
-              {nodesList.length === 0 && (
-                <div className="px-3 py-6 text-center">
-                  <p
-                    className="text-[11px] text-slate-400 italic"
-                    style={{ fontFamily: 'Poppins, sans-serif' }}
-                  >
-                    No nodes in network. Add nodes to the canvas first.
-                  </p>
                 </div>
-              )}
-            </div>
-          </ScrollArea>
+              );
+            })}
+            {nodesList.length === 0 && (
+              <div className="px-3 py-6 text-center">
+                <p
+                  className="text-[11px] text-slate-400 italic"
+                  style={{ fontFamily: 'Poppins, sans-serif' }}
+                >
+                  No nodes in network. Add nodes to the canvas first.
+                </p>
+              </div>
+            )}
+          </div>
         </PropSection>
 
       </div>
@@ -169,7 +166,7 @@ export function NodeSelectionPanel({ onSave, onClose }: NodeSelectionPanelProps)
             style={{ fontFamily: 'Poppins, sans-serif' }}
             data-testid="button-save-node-selection"
           >
-            <CheckCircle2 className="w-5 h-5" />
+            <Save className="w-5 h-5 text-white" />
             Save
           </Button>
         </div>

@@ -653,9 +653,8 @@ export function Header({
                 title="Time Stages"
                 headerExtra={
                   <Button
-                    variant="outline"
                     size="sm"
-                    className="h-6 text-[11px] px-2"
+                    className="h-6 text-[11px] px-3 rounded-full bg-[#1a73e8] hover:bg-[#1557b0] text-white border-0"
                     style={{ fontFamily: 'Poppins, sans-serif' }}
                     onClick={() => {
                       const newStages = [...computationalParams.stages, { dtcomp: 0.01, dtout: 0.1, tmax: 100 }];
