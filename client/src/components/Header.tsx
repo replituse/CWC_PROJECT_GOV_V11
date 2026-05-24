@@ -1175,7 +1175,7 @@ export function Header({
                         return (
                           <div
                             key={`${req.id}-${req.requestType}`}
-                            className="flex items-center justify-between px-3 py-2 group"
+                            className="flex items-center justify-between px-3 py-2"
                           >
                             <div>
                               <span
@@ -1194,7 +1194,7 @@ export function Header({
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+                              className="h-6 w-6 text-red-500 hover:text-red-700 hover:bg-red-50"
                               onClick={() => removeOutputRequest(req.id)}
                             >
                               <Trash2 className="w-3 h-3" />
