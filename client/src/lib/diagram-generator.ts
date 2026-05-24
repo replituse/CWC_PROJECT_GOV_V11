@@ -7,6 +7,7 @@ const STW = 20; const STH = 32;      // surgeTank (w × h)
 const SX  = 150;                     // column pitch (px)
 const SY  = 92;                      // row pitch (px)
 const MG  = 85;                      // canvas margin
+const LATERAL_OFFSET = 90;           // px above anchor for lateral nodes
 
 // ─── Bright colours per type ──────────────────────────────────────────────────
 const COLORS: Record<string, { fill: string; stroke: string; text: string }> = {
@@ -37,7 +38,7 @@ function esc(s: string) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
 
-// ─── Node shape — no SVG tooltip, just data attributes for React overlay ───────
+// ─── Node shape ────────────────────────────────────────────────────────────────
 function renderNode(type: string, x: number, y: number, label: string, srcId: string, srcType: string): string {
   const hh = nHH(type);
   const hw = nHW(type);
@@ -116,11 +117,13 @@ export function generateSystemDiagramSVG(
   }
 
   // ── Adjacency + in-degree ──────────────────────────────────────────────────
-  const adj:   Record<string, string[]> = {};
-  const inDeg: Record<string, number>   = {};
-  vns.forEach(n => { adj[n.id] = []; inDeg[n.id] = 0; });
+  const adj:    Record<string, string[]> = {};
+  const adjRev: Record<string, string[]> = {};
+  const inDeg:  Record<string, number>   = {};
+  vns.forEach(n => { adj[n.id] = []; adjRev[n.id] = []; inDeg[n.id] = 0; });
   ves.forEach(e => {
-    if (adj[e.from]) adj[e.from].push(e.to);
+    if (adj[e.from])   adj[e.from].push(e.to);
+    if (adjRev[e.to])  adjRev[e.to].push(e.from);
     if (e.to in inDeg) inDeg[e.to] = (inDeg[e.to] || 0) + 1;
   });
 
@@ -152,9 +155,30 @@ export function generateSystemDiagramSVG(
     }
   }
 
-  // ── Group by level → assign 2-D positions ─────────────────────────────────
+  // ── Detect LATERAL nodes ───────────────────────────────────────────────────
+  // A lateral node is a root (in-degree 0) with exactly 1 outgoing neighbor
+  // that itself has a higher level (i.e. the lateral node branches off mid-network).
+  // Classic example: a surge tank that tees into a junction.
+  // These are pulled OUT of the main horizontal layout and placed
+  // directly ABOVE their anchor node instead.
+  const lateralSet    = new Set<string>();
+  const lateralAnchor: Record<string, string> = {};  // lateralId → anchorId
+
+  vns.forEach(n => {
+    if ((inDeg[n.id] ?? 0) !== 0) return;            // must be a root
+    const neighbors = adj[n.id] || [];
+    if (neighbors.length !== 1) return;               // must have exactly 1 successor
+    const anchorId = neighbors[0];
+    if ((lvl[anchorId] ?? 0) > 0) {                  // anchor is not also a root
+      lateralSet.add(n.id);
+      lateralAnchor[n.id] = anchorId;
+    }
+  });
+
+  // ── Group by level → exclude laterals ─────────────────────────────────────
   const byLv: Record<number, string[]> = {};
   vns.forEach(n => {
+    if (lateralSet.has(n.id)) return;                 // handled separately
     const l = lvl[n.id] ?? 0;
     if (!byLv[l]) byLv[l] = [];
     byLv[l].push(n.id);
@@ -167,46 +191,63 @@ export function generateSystemDiagramSVG(
   const maxPerLevel  = Math.max(...Object.values(byLv).map(a => a.length));
   const labelPadV    = 32;
 
+  // Extra top padding to accommodate lateral nodes placed above the main rows
+  const topPad = lateralSet.size > 0 ? LATERAL_OFFSET + STH + 20 : 0;
+
   const svgW = MG * 2 + (nLevels - 1) * SX + RRW + 80;
-  const svgH = Math.max(260, MG * 2 + (maxPerLevel - 1) * SY + STH + labelPadV + 40);
+  const svgH = Math.max(260, topPad + MG * 2 + (maxPerLevel - 1) * SY + STH + labelPadV + 40);
 
   const pos: Record<string, { x: number; y: number }> = {};
 
+  // Initial vertical placement centred in the lower portion (below topPad)
+  const mainTop = topPad + MG;
+
   Object.entries(byLv).forEach(([lStr, ids]) => {
-    const l   = parseInt(lStr);
-    const cx  = MG + l * SX;
+    const l       = parseInt(lStr);
+    const cx      = MG + l * SX;
     const totalH  = (ids.length - 1) * SY;
-    const startY  = svgH / 2 - totalH / 2;
+    const startY  = mainTop + (svgH - mainTop - MG) / 2 - totalH / 2;
     ids.forEach((id, i) => {
       pos[id] = { x: cx, y: startY + i * SY };
     });
   });
 
+  // ── Re-order rows at each level by predecessor-Y score ────────────────────
+  // (only score based on NON-lateral predecessors so lateral nodes don't skew rows)
   for (let l = 1; l < nLevels; l++) {
     const ids = byLv[l];
     if (!ids || ids.length < 2) continue;
     const score: Record<string, number> = {};
     ids.forEach(id => {
       const preds = ves
-        .filter(ve => ve.to === id && pos[ve.from])
+        .filter(ve => ve.to === id && pos[ve.from] && !lateralSet.has(ve.from))
         .map(ve => pos[ve.from].y);
       score[id] = preds.length ? preds.reduce((a, b) => a + b, 0) / preds.length : 0;
     });
     ids.sort((a, b) => (score[a] || 0) - (score[b] || 0));
     const totalH = (ids.length - 1) * SY;
-    const startY = svgH / 2 - totalH / 2;
+    const startY = mainTop + (svgH - mainTop - MG) / 2 - totalH / 2;
     ids.forEach((id, i) => {
       pos[id] = { x: pos[id].x, y: startY + i * SY };
     });
   }
 
+  // ── Place lateral nodes directly ABOVE their anchor ───────────────────────
+  lateralSet.forEach(id => {
+    const anchorId = lateralAnchor[id];
+    const ap = pos[anchorId];
+    if (ap) {
+      pos[id] = { x: ap.x, y: ap.y - LATERAL_OFFSET };
+    }
+  });
+
   // ── Detect parallel edges ──────────────────────────────────────────────────
-  const pairCount: Record<string, number>  = {};
-  const pairIndex: Record<string, number>  = {};
+  const pairCount: Record<string, number> = {};
+  const pairIndex: Record<string, number> = {};
   ves.forEach(ve => {
     const k = `${ve.from}→${ve.to}`;
     pairIndex[k] = (pairIndex[k] ?? -1) + 1;
-    ve['_idx'] = pairIndex[k];
+    (ve as any)['_idx'] = pairIndex[k];
     pairCount[k] = (pairCount[k] ?? 0) + 1;
   });
 
@@ -236,9 +277,40 @@ export function generateSystemDiagramSVG(
     const t1 = nm[ve.from]?.type || 'node';
     const t2 = nm[ve.to]?.type   || 'node';
 
+    const isFromLateral = lateralSet.has(ve.from);
+    const isToLateral   = lateralSet.has(ve.to);
+
+    // ── Vertical edge: lateral node → its anchor (drawn top-to-bottom) ──────
+    if (isFromLateral && !isToLateral) {
+      const x1 = p1.x;
+      const y1 = p1.y + nHH(t1);   // bottom of lateral node
+      const x2 = p2.x;
+      const y2 = p2.y - nHH(t2);   // top of anchor node
+
+      const sty = 'stroke="#555" stroke-width="1.5"';
+      const d   = `M${x1} ${y1} L${x2} ${y2}`;
+      svg += `<path d="${d}" ${sty} fill="none" marker-end="url(#arr)"/>\n`;
+
+      // Conduit label midpoint
+      if (ve.label) {
+        const lx  = x1;
+        const ly  = (y1 + y2) / 2;
+        const lw  = ve.label.length * 7 + 16;
+        const lh  = 14;
+        svg += `<g class="cg" data-srcid="${esc(ve.srcEdgeId)}" data-srctype="edge" style="pointer-events:all;cursor:pointer">
+  <rect class="lbl" x="${lx - lw / 2}" y="${ly - lh / 2}" width="${lw}" height="${lh}"
+    rx="7" fill="white" stroke="#888" stroke-width="1"/>
+  <text class="lbl" x="${lx}" y="${ly + 4.5}" text-anchor="middle" font-size="9"
+    font-weight="700" fill="#333" font-family="Arial,sans-serif">${esc(ve.label)}</text>
+</g>\n`;
+      }
+      return;
+    }
+
+    // ── Standard horizontal / elbow edge ─────────────────────────────────────
     const k     = `${ve.from}→${ve.to}`;
     const total = pairCount[k] || 1;
-    const idx   = ve['_idx'] as number ?? 0;
+    const idx   = (ve as any)['_idx'] as number ?? 0;
     const vOff  = total > 1 ? (idx - (total - 1) / 2) * 12 : 0;
 
     const x1 = p1.x + nHW(t1);
@@ -261,7 +333,7 @@ export function generateSystemDiagramSVG(
 
     svg += `<path d="${d}" ${sty} fill="none" ${mk}/>\n`;
 
-    // Conduit label pill — centered on the arrow line, with data attributes for React tooltip
+    // Conduit label pill
     if (ve.label) {
       const lx = Math.abs(y1 - y2) < 3
         ? (x1 + x2) / 2
