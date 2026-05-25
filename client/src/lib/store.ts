@@ -1464,156 +1464,189 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
     get().saveToHistory();
 
-    const H_GAP = 220;
-    const V_GAP = 130;
+    const H_GAP = 240; // horizontal distance between columns
+    const V_GAP = 160; // vertical distance between nodes in the same column
 
-    // Build adjacency maps
-    const outgoing = new Map<string, string[]>(); // nodeId -> [targetId, ...]
-    const incoming = new Map<string, string[]>(); // nodeId -> [sourceId, ...]
-    nodes.forEach(n => { outgoing.set(n.id, []); incoming.set(n.id, []); });
+    // ── STEP 1: Build full adjacency (deduplicated, no self-loops) ─────────────
+    const allOut = new Map<string, Set<string>>();
+    const allIn  = new Map<string, Set<string>>();
+    nodes.forEach(n => { allOut.set(n.id, new Set()); allIn.set(n.id, new Set()); });
     edges.forEach(e => {
-      if (outgoing.has(e.source) && outgoing.has(e.target)) {
-        outgoing.get(e.source)!.push(e.target);
-        incoming.get(e.target)!.push(e.source);
-      }
+      if (e.source === e.target) return;
+      if (!allOut.has(e.source) || !allOut.has(e.target)) return;
+      allOut.get(e.source)!.add(e.target);
+      allIn.get(e.target)!.add(e.source);
     });
 
-    // SOURCE NODE PRIORITY: reservoir > flowBoundary > nodes with no incoming edges > others
-    const sourceTypes = new Set(['reservoir', 'flowBoundary']);
-    const levelMap = new Map<string, number>(); // nodeId -> column level
+    // ── STEP 2: Cycle-break using DFS — find & remove back edges ──────────────
+    const dfsVisited  = new Set<string>();
+    const dfsStack    = new Set<string>();
+    const backEdgeSet = new Set<string>(); // "src->tgt"
 
-    // Find explicit source nodes (type-based or no incoming edges)
-    const typeSources = nodes
-      .filter(n => sourceTypes.has(n.type as string))
+    const dfs = (id: string) => {
+      dfsVisited.add(id);
+      dfsStack.add(id);
+      for (const nb of allOut.get(id) ?? []) {
+        if (!dfsVisited.has(nb)) dfs(nb);
+        else if (dfsStack.has(nb)) backEdgeSet.add(`${id}->${nb}`);
+      }
+      dfsStack.delete(id);
+    };
+    nodes.forEach(n => { if (!dfsVisited.has(n.id)) dfs(n.id); });
+
+    // Build DAG adjacency (back edges removed)
+    const dagOut = new Map<string, string[]>();
+    const dagIn  = new Map<string, string[]>();
+    nodes.forEach(n => { dagOut.set(n.id, []); dagIn.set(n.id, []); });
+    const seenEdge = new Set<string>();
+    edges.forEach(e => {
+      if (e.source === e.target) return;
+      if (!dagOut.has(e.source) || !dagOut.has(e.target)) return;
+      const key = `${e.source}->${e.target}`;
+      if (backEdgeSet.has(key) || seenEdge.has(key)) return;
+      seenEdge.add(key);
+      dagOut.get(e.source)!.push(e.target);
+      dagIn.get(e.target)!.push(e.source);
+    });
+
+    // ── STEP 3: Longest-path layering (Kahn's topo-sort + DP) ─────────────────
+    const levelMap   = new Map<string, number>();
+    const inDeg      = new Map<string, number>();
+    nodes.forEach(n => {
+      levelMap.set(n.id, 0);
+      inDeg.set(n.id, dagIn.get(n.id)!.length);
+    });
+
+    // Seed queue — reservoirs and flow-boundaries first (they are always sources)
+    const priorityOrder = ['reservoir', 'flowBoundary'];
+    const nodeType = new Map(nodes.map(n => [n.id, n.type as string]));
+
+    const seeds = nodes
+      .filter(n => inDeg.get(n.id) === 0)
+      .sort((a, b) => {
+        const ap = priorityOrder.indexOf(nodeType.get(a.id) ?? '');
+        const bp = priorityOrder.indexOf(nodeType.get(b.id) ?? '');
+        return (ap < 0 ? 99 : ap) - (bp < 0 ? 99 : bp);
+      })
       .map(n => n.id);
-    const topologicalSources = nodes
-      .filter(n => (incoming.get(n.id)?.length ?? 0) === 0 && !sourceTypes.has(n.type as string))
-      .map(n => n.id);
 
-    const seedNodes = typeSources.length > 0
-      ? typeSources
-      : topologicalSources.length > 0
-        ? topologicalSources
-        : [nodes[0].id];
+    const topoQueue = [...seeds];
+    const processed = new Set<string>();
 
-    // BFS to assign levels
-    const queue: string[] = [...seedNodes];
-    seedNodes.forEach(id => levelMap.set(id, 0));
-
-    while (queue.length > 0) {
-      const current = queue.shift()!;
-      const currentLevel = levelMap.get(current)!;
-      for (const neighbor of (outgoing.get(current) ?? [])) {
-        const existingLevel = levelMap.get(neighbor);
-        if (existingLevel === undefined || existingLevel < currentLevel + 1) {
-          levelMap.set(neighbor, currentLevel + 1);
-          queue.push(neighbor);
+    while (topoQueue.length > 0) {
+      const cur = topoQueue.shift()!;
+      if (processed.has(cur)) continue;
+      processed.add(cur);
+      const curLvl = levelMap.get(cur)!;
+      for (const nb of dagOut.get(cur) ?? []) {
+        if ((curLvl + 1) > (levelMap.get(nb) ?? 0)) {
+          levelMap.set(nb, curLvl + 1);
         }
+        const newDeg = (inDeg.get(nb) ?? 1) - 1;
+        inDeg.set(nb, newDeg);
+        if (newDeg <= 0 && !processed.has(nb)) topoQueue.push(nb);
       }
     }
 
-    // Handle disconnected components: assign remaining unvisited nodes
-    let extraLevel = 0;
-    const visitedIds = new Set(levelMap.keys());
+    // Any nodes in cycles that weren't processed: place them near their neighbours
     nodes.forEach(n => {
-      if (!visitedIds.has(n.id)) {
-        levelMap.set(n.id, extraLevel);
-        // BFS from this node too
-        const subQueue = [n.id];
-        while (subQueue.length > 0) {
-          const cur = subQueue.shift()!;
-          const curLvl = levelMap.get(cur)!;
-          for (const neighbor of (outgoing.get(cur) ?? [])) {
-            if (!levelMap.has(neighbor)) {
-              levelMap.set(neighbor, curLvl + 1);
-              subQueue.push(neighbor);
-            }
-          }
-          for (const neighbor of (incoming.get(cur) ?? [])) {
-            if (!levelMap.has(neighbor)) {
-              levelMap.set(neighbor, Math.max(0, curLvl - 1));
-              subQueue.push(neighbor);
-            }
-          }
+      if (!processed.has(n.id)) {
+        let best = 0;
+        for (const nb of allOut.get(n.id) ?? []) {
+          if (processed.has(nb)) best = Math.max(best, (levelMap.get(nb) ?? 0) - 1);
         }
-        extraLevel += 3;
+        for (const nb of allIn.get(n.id) ?? []) {
+          if (processed.has(nb)) best = Math.max(best, (levelMap.get(nb) ?? 0) + 1);
+        }
+        levelMap.set(n.id, best);
       }
     });
 
-    // Group nodes by level
+    // ── STEP 4: Group nodes by level ──────────────────────────────────────────
     const levelGroups = new Map<number, string[]>();
     levelMap.forEach((lvl, id) => {
       if (!levelGroups.has(lvl)) levelGroups.set(lvl, []);
       levelGroups.get(lvl)!.push(id);
     });
 
-    // Sort levels
+    // Re-index levels to consecutive 0-based integers
     const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
-
-    // Re-index levels to be 0-based consecutive
-    const levelRemap = new Map<number, number>();
+    const levelRemap   = new Map<number, number>();
     sortedLevels.forEach((lvl, idx) => levelRemap.set(lvl, idx));
 
-    // Sort nodes within each level by average parent position (minimize crossings)
-    // First pass: assign temp Y based on original positions to seed the sort
+    // ── STEP 5: Barycenter heuristic (3 passes) to minimise edge crossings ─────
     const tempY = new Map<string, number>();
     nodes.forEach(n => tempY.set(n.id, n.position.y));
 
-    // Two passes to stabilize node ordering within columns
-    for (let pass = 0; pass < 2; pass++) {
-      levelGroups.forEach((ids, lvl) => {
+    for (let pass = 0; pass < 3; pass++) {
+      levelGroups.forEach((ids, _lvl) => {
         const sorted = [...ids].sort((a, b) => {
-          const aParents = incoming.get(a) ?? [];
-          const bParents = incoming.get(b) ?? [];
-          const avgParentY = (nodeId: string) => {
-            const parents = incoming.get(nodeId) ?? [];
-            if (parents.length === 0) {
-              const aChildren = outgoing.get(nodeId) ?? [];
-              if (aChildren.length === 0) return tempY.get(nodeId) ?? 0;
-              return aChildren.reduce((s, c) => s + (tempY.get(c) ?? 0), 0) / aChildren.length;
-            }
-            return parents.reduce((s, p) => s + (tempY.get(p) ?? 0), 0) / parents.length;
+          const score = (id: string) => {
+            const parents  = dagIn.get(id)  ?? [];
+            const children = dagOut.get(id) ?? [];
+            const all      = [...parents, ...children];
+            if (all.length === 0) return tempY.get(id) ?? 0;
+            return all.reduce((s, nb) => s + (tempY.get(nb) ?? 0), 0) / all.length;
           };
-          return avgParentY(a) - avgParentY(b);
+          return score(a) - score(b);
         });
-        // Update tempY based on sorted order
         sorted.forEach((id, idx) => tempY.set(id, idx * V_GAP));
-        levelGroups.set(lvl, sorted);
+        levelGroups.set(_lvl, sorted);
       });
     }
 
-    // Compute final positions
-    const posMap = new Map<string, { x: number; y: number }>();
+    // ── STEP 6: Compute final node positions ───────────────────────────────────
+    const rawPos = new Map<string, { x: number; y: number }>();
     levelGroups.forEach((ids, lvl) => {
-      const colIndex = levelRemap.get(lvl) ?? lvl;
-      const x = colIndex * H_GAP;
-      // Center nodes vertically within the column
-      const totalHeight = (ids.length - 1) * V_GAP;
+      const col = levelRemap.get(lvl) ?? lvl;
+      const x   = col * H_GAP;
+      const totalH = (ids.length - 1) * V_GAP;
       ids.forEach((id, rowIdx) => {
-        const y = rowIdx * V_GAP - totalHeight / 2;
-        posMap.set(id, { x, y });
+        rawPos.set(id, { x, y: rowIdx * V_GAP - totalH / 2 });
       });
     });
 
-    // Shift all positions so the top-left is at (80, 80)
+    // Offset so top-left corner sits at (80, 80)
     let minX = Infinity, minY = Infinity;
-    posMap.forEach(pos => {
-      if (pos.x < minX) minX = pos.x;
-      if (pos.y < minY) minY = pos.y;
+    rawPos.forEach(p => { if (p.x < minX) minX = p.x; if (p.y < minY) minY = p.y; });
+
+    const finalPos = new Map<string, { x: number; y: number }>();
+    rawPos.forEach((p, id) => {
+      finalPos.set(id, { x: p.x - minX + 80, y: p.y - minY + 80 });
     });
 
+    // ── STEP 7: Re-assign edge handles based on relative node positions ────────
+    // This is the critical fix — without this, edges exit/enter from wrong sides.
+    const arrangedEdges = edges.map(e => {
+      if (e.source === e.target) return e;
+      const src = finalPos.get(e.source);
+      const tgt = finalPos.get(e.target);
+      if (!src || !tgt) return e;
+
+      const dx = tgt.x - src.x;
+      const dy = tgt.y - src.y;
+      let sourceHandle: string;
+      let targetHandle: string;
+
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        // Primarily horizontal movement
+        if (dx >= 0) { sourceHandle = 's-right'; targetHandle = 't-left'; }
+        else         { sourceHandle = 's-left';  targetHandle = 't-right'; }
+      } else {
+        // Primarily vertical movement
+        if (dy >= 0) { sourceHandle = 's-bottom'; targetHandle = 't-top'; }
+        else         { sourceHandle = 's-top';    targetHandle = 't-bottom'; }
+      }
+
+      return { ...e, sourceHandle, targetHandle };
+    });
+
+    // ── STEP 8: Apply ──────────────────────────────────────────────────────────
     const arrangedNodes = nodes.map(n => {
-      const pos = posMap.get(n.id);
-      if (!pos) return n;
-      return {
-        ...n,
-        position: {
-          x: pos.x - minX + 80,
-          y: pos.y - minY + 80,
-        },
-      };
+      const pos = finalPos.get(n.id);
+      return pos ? { ...n, position: pos } : n;
     });
 
-    set({ nodes: arrangedNodes as WhamoNode[] });
+    set({ nodes: arrangedNodes as WhamoNode[], edges: arrangedEdges as WhamoEdge[] });
   },
 }));
