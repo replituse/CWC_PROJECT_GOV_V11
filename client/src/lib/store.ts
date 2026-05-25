@@ -174,6 +174,7 @@ interface NetworkState {
   updateVSchedule: (schedNum: number, points: { t: number; g: number }[]) => void;
   addVSchedule: (schedNum: number) => void;
   deleteVSchedule: (schedNum: number) => void;
+  autoArrange: () => void;
   autoSelectOutputRequests: () => void;
   updateComputationalParams: (params: Partial<ComputationalParameters>) => void;
   addOutputRequest: (request: Omit<OutputRequest, 'id'>) => void;
@@ -1455,5 +1456,164 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
         future: newFuture,
       },
     });
+  },
+
+  autoArrange: () => {
+    const { nodes, edges } = get();
+    if (nodes.length === 0) return;
+
+    get().saveToHistory();
+
+    const H_GAP = 220;
+    const V_GAP = 130;
+
+    // Build adjacency maps
+    const outgoing = new Map<string, string[]>(); // nodeId -> [targetId, ...]
+    const incoming = new Map<string, string[]>(); // nodeId -> [sourceId, ...]
+    nodes.forEach(n => { outgoing.set(n.id, []); incoming.set(n.id, []); });
+    edges.forEach(e => {
+      if (outgoing.has(e.source) && outgoing.has(e.target)) {
+        outgoing.get(e.source)!.push(e.target);
+        incoming.get(e.target)!.push(e.source);
+      }
+    });
+
+    // SOURCE NODE PRIORITY: reservoir > flowBoundary > nodes with no incoming edges > others
+    const sourceTypes = new Set(['reservoir', 'flowBoundary']);
+    const levelMap = new Map<string, number>(); // nodeId -> column level
+
+    // Find explicit source nodes (type-based or no incoming edges)
+    const typeSources = nodes
+      .filter(n => sourceTypes.has(n.type as string))
+      .map(n => n.id);
+    const topologicalSources = nodes
+      .filter(n => (incoming.get(n.id)?.length ?? 0) === 0 && !sourceTypes.has(n.type as string))
+      .map(n => n.id);
+
+    const seedNodes = typeSources.length > 0
+      ? typeSources
+      : topologicalSources.length > 0
+        ? topologicalSources
+        : [nodes[0].id];
+
+    // BFS to assign levels
+    const queue: string[] = [...seedNodes];
+    seedNodes.forEach(id => levelMap.set(id, 0));
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      const currentLevel = levelMap.get(current)!;
+      for (const neighbor of (outgoing.get(current) ?? [])) {
+        const existingLevel = levelMap.get(neighbor);
+        if (existingLevel === undefined || existingLevel < currentLevel + 1) {
+          levelMap.set(neighbor, currentLevel + 1);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    // Handle disconnected components: assign remaining unvisited nodes
+    let extraLevel = 0;
+    const visitedIds = new Set(levelMap.keys());
+    nodes.forEach(n => {
+      if (!visitedIds.has(n.id)) {
+        levelMap.set(n.id, extraLevel);
+        // BFS from this node too
+        const subQueue = [n.id];
+        while (subQueue.length > 0) {
+          const cur = subQueue.shift()!;
+          const curLvl = levelMap.get(cur)!;
+          for (const neighbor of (outgoing.get(cur) ?? [])) {
+            if (!levelMap.has(neighbor)) {
+              levelMap.set(neighbor, curLvl + 1);
+              subQueue.push(neighbor);
+            }
+          }
+          for (const neighbor of (incoming.get(cur) ?? [])) {
+            if (!levelMap.has(neighbor)) {
+              levelMap.set(neighbor, Math.max(0, curLvl - 1));
+              subQueue.push(neighbor);
+            }
+          }
+        }
+        extraLevel += 3;
+      }
+    });
+
+    // Group nodes by level
+    const levelGroups = new Map<number, string[]>();
+    levelMap.forEach((lvl, id) => {
+      if (!levelGroups.has(lvl)) levelGroups.set(lvl, []);
+      levelGroups.get(lvl)!.push(id);
+    });
+
+    // Sort levels
+    const sortedLevels = Array.from(levelGroups.keys()).sort((a, b) => a - b);
+
+    // Re-index levels to be 0-based consecutive
+    const levelRemap = new Map<number, number>();
+    sortedLevels.forEach((lvl, idx) => levelRemap.set(lvl, idx));
+
+    // Sort nodes within each level by average parent position (minimize crossings)
+    // First pass: assign temp Y based on original positions to seed the sort
+    const tempY = new Map<string, number>();
+    nodes.forEach(n => tempY.set(n.id, n.position.y));
+
+    // Two passes to stabilize node ordering within columns
+    for (let pass = 0; pass < 2; pass++) {
+      levelGroups.forEach((ids, lvl) => {
+        const sorted = [...ids].sort((a, b) => {
+          const aParents = incoming.get(a) ?? [];
+          const bParents = incoming.get(b) ?? [];
+          const avgParentY = (nodeId: string) => {
+            const parents = incoming.get(nodeId) ?? [];
+            if (parents.length === 0) {
+              const aChildren = outgoing.get(nodeId) ?? [];
+              if (aChildren.length === 0) return tempY.get(nodeId) ?? 0;
+              return aChildren.reduce((s, c) => s + (tempY.get(c) ?? 0), 0) / aChildren.length;
+            }
+            return parents.reduce((s, p) => s + (tempY.get(p) ?? 0), 0) / parents.length;
+          };
+          return avgParentY(a) - avgParentY(b);
+        });
+        // Update tempY based on sorted order
+        sorted.forEach((id, idx) => tempY.set(id, idx * V_GAP));
+        levelGroups.set(lvl, sorted);
+      });
+    }
+
+    // Compute final positions
+    const posMap = new Map<string, { x: number; y: number }>();
+    levelGroups.forEach((ids, lvl) => {
+      const colIndex = levelRemap.get(lvl) ?? lvl;
+      const x = colIndex * H_GAP;
+      // Center nodes vertically within the column
+      const totalHeight = (ids.length - 1) * V_GAP;
+      ids.forEach((id, rowIdx) => {
+        const y = rowIdx * V_GAP - totalHeight / 2;
+        posMap.set(id, { x, y });
+      });
+    });
+
+    // Shift all positions so the top-left is at (80, 80)
+    let minX = Infinity, minY = Infinity;
+    posMap.forEach(pos => {
+      if (pos.x < minX) minX = pos.x;
+      if (pos.y < minY) minY = pos.y;
+    });
+
+    const arrangedNodes = nodes.map(n => {
+      const pos = posMap.get(n.id);
+      if (!pos) return n;
+      return {
+        ...n,
+        position: {
+          x: pos.x - minX + 80,
+          y: pos.y - minY + 80,
+        },
+      };
+    });
+
+    set({ nodes: arrangedNodes as WhamoNode[] });
   },
 }));

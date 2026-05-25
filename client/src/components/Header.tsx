@@ -300,6 +300,7 @@ export function Header({
     setGlobalUnit,
     showHoverData,
     setShowHoverData,
+    autoArrange,
   } = useNetworkStore();
 
   const [localParams, setLocalParams] = useState(computationalParams);
@@ -475,9 +476,9 @@ export function Header({
     <div className="flex flex-col border-b bg-white shadow-sm">
 
       {/* ── TITLE BAR ── */}
-      <div className="relative flex items-center px-3 py-1.5 border-b border-slate-100 bg-white">
-        {/* LEFT: File ops + Undo/Redo */}
-        <div className="flex items-center gap-0.5 z-10">
+      <div className="flex items-center px-3 py-1.5 border-b border-slate-100 bg-white">
+        {/* LEFT: File ops + Undo/Redo + Arrange — takes natural width, min-w to reserve space */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
           <TitleBarBtn imgSrc={addFileIcon} label="New" onClick={() => { clearNetwork(); }} />
           <TitleBarBtn imgSrc={openFolderIcon} label="Open" onClick={onLoad} />
           <TitleBarBtn imgSrc={floppyDiskIcon} label="Save" onClick={onSave} />
@@ -485,11 +486,13 @@ export function Header({
           <div className="w-px bg-slate-200 mx-1 h-6 flex-shrink-0" />
           <TitleBarBtn icon={<Undo2 className="w-[22px] h-[22px]" />} label="Undo" onClick={undo} disabled={history.past.length === 0} />
           <TitleBarBtn icon={<Redo2 className="w-[22px] h-[22px]" />} label="Redo" onClick={redo} disabled={history.future.length === 0} />
+          <div className="w-px bg-slate-200 mx-1 h-6 flex-shrink-0" />
+          <TitleBarBtn icon={<Layout className="w-[22px] h-[22px]" />} label="Arrange" onClick={autoArrange} disabled={nodes.length === 0} data-testid="btn-auto-arrange" />
         </div>
 
-        {/* CENTER: absolutely centered folder icon + project name */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="flex items-center gap-2 pointer-events-auto">
+        {/* CENTER: flex-1 grows to fill space and centers the project name */}
+        <div className="flex-1 flex items-center justify-center">
+          <div className="flex items-center gap-2">
             <img src={folderIcon} alt="Folder" className="w-6 h-6 object-contain flex-shrink-0" />
             <input
               className={`text-sm font-medium text-black bg-transparent border focus:outline-none px-1.5 py-0.5 rounded hover:bg-slate-50 w-[220px] text-center ${projectNameError ? 'border-red-400' : 'border-transparent'}`}
@@ -507,7 +510,7 @@ export function Header({
         </div>
 
         {/* RIGHT: Units pill */}
-        <div className="ml-auto flex items-center gap-2 z-10">
+        <div className="flex items-center gap-2 flex-shrink-0">
           <span className="text-[12px] text-black font-semibold">Units:</span>
           <div className="flex items-center rounded-full border-2 border-slate-300 bg-white overflow-hidden shadow-sm">
             <button
