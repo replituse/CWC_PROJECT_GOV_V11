@@ -1464,8 +1464,8 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
 
     get().saveToHistory();
 
-    const H_GAP = 240; // horizontal distance between columns
-    const V_GAP = 160; // vertical distance between nodes in the same column
+    const H_GAP = 300; // horizontal distance between columns
+    const V_GAP = 190; // vertical distance per leaf-unit (base spacing)
 
     // ── STEP 1: Build full adjacency (deduplicated, no self-loops) ─────────────
     const allOut = new Map<string, Set<string>>();
@@ -1595,14 +1595,39 @@ export const useNetworkStore = create<NetworkState>((set, get) => ({
       });
     }
 
-    // ── STEP 6: Compute final node positions ───────────────────────────────────
+    // ── STEP 6: Subtree-aware node positions ──────────────────────────────────
+    // Compute the "leaf span" of each node — the number of leaves reachable
+    // through its DAG descendants.  Nodes with N branches below them get N×
+    // the vertical slot so sibling branches never crowd each other.
+    const leafSpan = new Map<string, number>();
+    const computeLeafSpan = (id: string, visiting = new Set<string>()): number => {
+      if (leafSpan.has(id)) return leafSpan.get(id)!;
+      if (visiting.has(id)) { leafSpan.set(id, 1); return 1; }
+      visiting.add(id);
+      const children = dagOut.get(id) ?? [];
+      const span = children.length === 0
+        ? 1
+        : children.reduce((s, c) => s + computeLeafSpan(c, visiting), 0);
+      leafSpan.set(id, span);
+      return span;
+    };
+    nodes.forEach(n => computeLeafSpan(n.id));
+
     const rawPos = new Map<string, { x: number; y: number }>();
     levelGroups.forEach((ids, lvl) => {
       const col = levelRemap.get(lvl) ?? lvl;
       const x   = col * H_GAP;
-      const totalH = (ids.length - 1) * V_GAP;
-      ids.forEach((id, rowIdx) => {
-        rawPos.set(id, { x, y: rowIdx * V_GAP - totalH / 2 });
+
+      // Total span = sum of all leaf-spans in this column
+      const spans   = ids.map(id => Math.max(1, leafSpan.get(id) ?? 1));
+      const totalH  = (spans.reduce((s, sp) => s + sp, 0) - 1) * V_GAP;
+
+      let curY = -totalH / 2;
+      ids.forEach((id, i) => {
+        const sp = spans[i];
+        // Centre this node inside its allocated slot
+        rawPos.set(id, { x, y: curY + (sp - 1) * V_GAP / 2 });
+        curY += sp * V_GAP;
       });
     });
 
