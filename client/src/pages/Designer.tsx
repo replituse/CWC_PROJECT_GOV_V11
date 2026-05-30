@@ -61,6 +61,7 @@ import {
 import { ValidationModal } from '@/components/ValidationModal';
 import { validateNetwork, ValidationError } from '@/lib/validator';
 import { VisualizationView } from '@/components/visualization/VisualizationView';
+import { FilePreviewModal } from '@/components/FilePreviewModal';
 
 const nodeTypes = {
   reservoir: ReservoirNode,
@@ -655,24 +656,15 @@ function DesignerInner() {
     }
     // force === true → user confirmed via Output Requests dialog, actually generate
     try {
-      // Pass false to prevent internal download, we handle it here
       const inpContent = generateInpFile(nodes as WhamoNode[], edges as WhamoEdge[], false);
-      
-      // Generate system diagram
-      const diagramHtml = generateSystemDiagram(nodes, edges);
-      const diagramBlob = new Blob([diagramHtml], { type: 'text/html' });
-      saveAs(diagramBlob, `system_diagram_${Date.now()}.html`);
-
-      // Download the .inp file with the project name
-      const blob = new Blob([inpContent], { type: "text/plain" });
       const downloadName = (projectName && projectName !== "Untitled Network") ? projectName : "network";
-      saveAs(blob, `${downloadName}.inp`);
-      
+
+      // Show preview modal instead of direct download
+      setFilePreview({ content: inpContent, fileName: `${downloadName}.inp`, type: 'inp' });
+
       const { nodeOrderErrorIds } = useNetworkStore.getState();
       if (nodeOrderErrorIds.length > 0) {
-        toast({ variant: "destructive", title: "Files Generated with Errors", description: `${nodeOrderErrorIds.length} node(s) have ascending-order violations. Correct node numbers before running WHAMO.` });
-      } else {
-        toast({ variant: "success", title: "Files Generated", description: "WHAMO input file and System Diagram downloaded successfully." });
+        toast({ variant: "destructive", title: "Generated with Errors", description: `${nodeOrderErrorIds.length} node(s) have ascending-order violations. Correct node numbers before running WHAMO.` });
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Generation Failed", description: err instanceof Error ? err.message : "Could not generate files. Check connections." });
@@ -707,6 +699,7 @@ function DesignerInner() {
   const [visualizationOutContent, setVisualizationOutContent] = useState<string | null>(null);
   const [visualizationFileName, setVisualizationFileName] = useState<string>("");
   const [isRunningSimulation, setIsRunningSimulation] = useState(false);
+  const [filePreview, setFilePreview] = useState<{ content: string; fileName: string; type: 'inp' | 'out' } | null>(null);
 
   useEffect(() => {
     const handleToggleGrid = () => setShowGrid((prev) => !prev);
@@ -1024,7 +1017,19 @@ function DesignerInner() {
         onVisualization={handleVisualizationClick}
         activeLinkTool={activeLinkTool}
         onSetLinkTool={setActiveLinkTool}
+        onShowFilePreview={(content, fileName, type) => setFilePreview({ content, fileName, type })}
       />
+
+      {/* File Preview Modal */}
+      {filePreview && (
+        <FilePreviewModal
+          isOpen={!!filePreview}
+          onClose={() => setFilePreview(null)}
+          content={filePreview.content}
+          fileName={filePreview.fileName}
+          type={filePreview.type}
+        />
+      )}
 
       {/* Simulation running overlay */}
       {isRunningSimulation && (

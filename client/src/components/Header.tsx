@@ -41,7 +41,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
+import { useAuth } from "@/context/AuthContext";
 import {
   Select,
   SelectContent,
@@ -238,6 +239,7 @@ interface HeaderProps {
   onVisualization?: () => void;
   activeLinkTool?: 'pump' | 'checkValve' | 'turbine' | null;
   onSetLinkTool?: (tool: 'pump' | 'checkValve' | 'turbine' | null) => void;
+  onShowFilePreview?: (content: string, fileName: string, type: 'inp' | 'out') => void;
 }
 
 export function Header({
@@ -253,7 +255,9 @@ export function Header({
   onVisualization,
   activeLinkTool,
   onSetLinkTool,
+  onShowFilePreview,
 }: HeaderProps) {
+  const { user, logout } = useAuth();
   const { toast } = useToast();
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
@@ -360,11 +364,9 @@ export function Header({
 
   const handleGenerateOutDirectly = async (fileName?: string) => {
     try {
-      // 1. Generate INP content from current state
       const { generateInpFile } = await import("@/lib/inp-generator");
       const inpContent = generateInpFile(nodes, edges, false);
 
-      // 2. Send to backend to run WHAMO
       const response = await fetch("/api/run-whamo", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -377,44 +379,23 @@ export function Header({
       }
 
       const data = await response.json();
-      
-      // Handle both array and object formats for maximum compatibility
-      const filesToDownload = Array.isArray(data.files) 
-        ? data.files 
-        : Object.entries(data.files || {}).map(([key, content]) => ({
-            name: `network.${key}`,
-            content: content as string,
-            type: "text/plain"
-          }));
+      const files = data.files || {};
 
-      if (filesToDownload.length === 0) {
+      if (Object.keys(files).length === 0) {
         throw new Error("No output files received from server");
       }
 
-      filesToDownload.forEach((file: { name: string; content: string; type?: string }) => {
-        const byteCharacters = atob(file.content);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: file.type || "text/plain" });
-        
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        const downloadName = (projectName && projectName !== "Untitled Network") ? projectName : "network";
-        const extension = file.name.split('.').pop();
-        link.download = `${downloadName}.${extension}`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(link.href);
-      });
+      const downloadName = (projectName && projectName !== "Untitled Network") ? projectName : "network";
 
-      toast({
-        title: "Success",
-        description: "WHAMO output files generated and downloaded.",
-      });
+      // Show OUT file in preview modal instead of auto-downloading
+      if (files.out) {
+        const binary = atob(files.out);
+        const bytes = Uint8Array.from(binary, (c) => c.charCodeAt(0));
+        const outText = new TextDecoder("utf-8").decode(bytes);
+        onShowFilePreview?.(outText, `${downloadName}.OUT`, 'out');
+      } else {
+        throw new Error("No .OUT file received from server");
+      }
     } catch (error: any) {
       console.error("WHAMO Error:", error);
       toast({
@@ -510,8 +491,8 @@ export function Header({
           </div>
         </div>
 
-        {/* RIGHT: Units pill */}
-        <div className="flex items-center gap-2 flex-shrink-0">
+        {/* RIGHT: Units pill + User/Logout */}
+        <div className="flex items-center gap-3 flex-shrink-0">
           <span className="text-[12px] text-black font-semibold">Units:</span>
           <div className="flex items-center rounded-full border-2 border-slate-300 bg-white overflow-hidden shadow-sm">
             <button
@@ -523,6 +504,21 @@ export function Header({
               className={`text-[13px] font-bold px-4 py-1 transition-colors ${globalUnit === 'FPS' ? 'bg-blue-600 text-white' : 'text-slate-600 hover:bg-slate-50'}`}
             >FPS</button>
           </div>
+          {user && (
+            <div className="flex items-center gap-2 pl-2 border-l border-slate-200">
+              <span className="text-[11px] text-slate-500 font-medium max-w-[120px] truncate" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                {user.fullName}
+              </span>
+              <button
+                onClick={logout}
+                className="text-[11px] font-semibold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-red-50 hover:text-red-600 text-slate-600 transition-colors border border-slate-200 hover:border-red-200"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+                data-testid="button-logout"
+              >
+                Sign out
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

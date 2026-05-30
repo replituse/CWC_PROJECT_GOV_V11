@@ -3,22 +3,18 @@ import type { Server } from "http";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { z } from "zod";
-import { execFile } from "child_process";
-import path from "path";
-import fs from "fs";
-import multer from "multer";
-import { v4 as uuidv4 } from "uuid";
-
-const upload = multer({ dest: "uploads/" });
-
 import { setupWhamoRoutes } from "./whamo-handler";
+import authRoutes from "./routes/authRoutes";
 
 export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // Auth routes (public)
+  app.use("/api/auth", authRoutes);
+
   setupWhamoRoutes(app);
-  
+
   // Project Routes
   app.get(api.projects.list.path, async (req, res) => {
     const projects = await storage.getProjects();
@@ -28,7 +24,7 @@ export async function registerRoutes(
   app.get(api.projects.get.path, async (req, res) => {
     const project = await storage.getProject(Number(req.params.id));
     if (!project) {
-      return res.status(404).json({ message: 'Project not found' });
+      return res.status(404).json({ message: "Project not found" });
     }
     res.json(project);
   });
@@ -42,7 +38,7 @@ export async function registerRoutes(
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
+          field: err.errors[0].path.join("."),
         });
       }
       throw err;
@@ -54,14 +50,14 @@ export async function registerRoutes(
       const input = api.projects.update.input.parse(req.body);
       const project = await storage.updateProject(Number(req.params.id), input);
       if (!project) {
-        return res.status(404).json({ message: 'Project not found' });
+        return res.status(404).json({ message: "Project not found" });
       }
       res.json(project);
     } catch (err) {
       if (err instanceof z.ZodError) {
         return res.status(400).json({
           message: err.errors[0].message,
-          field: err.errors[0].path.join('.'),
+          field: err.errors[0].path.join("."),
         });
       }
       throw err;
