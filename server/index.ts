@@ -2,8 +2,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { createServer } from "http";
-import { connectToDatabase } from "./config/database";
-import { seedDemoUser } from "./utils/seedDemoUser";
+import { userStore } from "./auth/inMemoryUserStore";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,9 +61,8 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Connect to MongoDB and seed demo user
-  await connectToDatabase();
-  await seedDemoUser();
+  // Seed demo user into in-memory store
+  await userStore.seedDemo();
 
   await registerRoutes(httpServer, app);
 

@@ -1,22 +1,12 @@
 import { Request, Response } from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { User } from "../models/User";
-import { isMongoConnected } from "../config/database";
+import { userStore } from "../auth/inMemoryUserStore";
 
 const JWT_SECRET = process.env.JWT_SECRET || "whamo-designer-jwt-fallback";
 const JWT_EXPIRES = "7d";
 
-function mongoGuard(res: Response): boolean {
-  if (!isMongoConnected()) {
-    res.status(503).json({ message: "Database not connected. Please check server configuration." });
-    return false;
-  }
-  return true;
-}
-
 export async function register(req: Request, res: Response) {
-  if (!mongoGuard(res)) return;
   try {
     const { fullName, email, password } = req.body;
 
@@ -27,13 +17,13 @@ export async function register(req: Request, res: Response) {
       return res.status(400).json({ message: "Password must be at least 8 characters" });
     }
 
-    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    const existing = await userStore.findByEmail(email);
     if (existing) {
       return res.status(409).json({ message: "An account with this email already exists" });
     }
 
     const hashed = await bcrypt.hash(password, 12);
-    await User.create({ fullName: fullName.trim(), email: email.toLowerCase().trim(), password: hashed });
+    await userStore.create(fullName.trim(), email.trim(), hashed);
 
     return res.status(201).json({ message: "Account created successfully" });
   } catch (err) {
@@ -43,7 +33,6 @@ export async function register(req: Request, res: Response) {
 }
 
 export async function login(req: Request, res: Response) {
-  if (!mongoGuard(res)) return;
   try {
     const { email, password } = req.body;
 
@@ -51,7 +40,7 @@ export async function login(req: Request, res: Response) {
       return res.status(400).json({ message: "Email and password are required" });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase().trim() });
+    const user = await userStore.findByEmail(email);
     if (!user) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
@@ -62,14 +51,14 @@ export async function login(req: Request, res: Response) {
     }
 
     const token = jwt.sign(
-      { id: user._id, email: user.email, fullName: user.fullName },
+      { id: user.id, email: user.email, fullName: user.fullName },
       JWT_SECRET,
       { expiresIn: JWT_EXPIRES }
     );
 
     return res.json({
       token,
-      user: { id: user._id, email: user.email, fullName: user.fullName },
+      user: { id: user.id, email: user.email, fullName: user.fullName },
     });
   } catch (err) {
     console.error("Login error:", err);
