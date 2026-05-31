@@ -220,9 +220,9 @@ function SmallRibbonBtn({
   );
 }
 
-function RibbonGroup({ label, children, flex = 1 }: { label: string; children: React.ReactNode; flex?: number }) {
+function RibbonGroup({ label, children, flex = 1, disabled = false }: { label: string; children: React.ReactNode; flex?: number; disabled?: boolean }) {
   return (
-    <div className="flex items-stretch" style={{ flex }}>
+    <div className={cn("flex items-stretch", disabled && "opacity-40 pointer-events-none select-none")} style={{ flex }}>
       <div className="flex flex-col w-full">
         <div className="text-center pt-1 pb-0.5">
           <span className="text-[11px] text-black font-medium tracking-wide uppercase" style={{ fontFamily: 'Poppins, sans-serif' }}>{label}</span>
@@ -252,7 +252,8 @@ interface HeaderProps {
   onSetLinkTool?: (tool: 'pump' | 'checkValve' | 'turbine' | null) => void;
   onShowFilePreview?: (content: string, fileName: string, type: 'inp' | 'out') => void;
   onLoadProject?: (project: any) => void;
-  currentProjectId?: number | null;
+  currentProjectId?: string | null;
+  isProjectOpen?: boolean;
 }
 
 export function Header({
@@ -271,6 +272,7 @@ export function Header({
   onShowFilePreview,
   onLoadProject,
   currentProjectId,
+  isProjectOpen = false,
 }: HeaderProps) {
   const { user, logout } = useAuth();
   const [showSettings, setShowSettings] = useState(false);
@@ -674,7 +676,7 @@ export function Header({
           />
         </RibbonGroup>
 
-        <RibbonGroup label="Tools" flex={4}>
+        <RibbonGroup label="Tools" flex={4} disabled={!isProjectOpen}>
           <InlineRibbonBtn imgSrc={networkIcon} label="Diagram" onClick={onShowDiagram} />
           <InlineRibbonBtn
             imgSrc={clickIcon}
@@ -695,7 +697,7 @@ export function Header({
           />
         </RibbonGroup>
 
-        <RibbonGroup label="Analysis" flex={2}>
+        <RibbonGroup label="Analysis" flex={2} disabled={!isProjectOpen}>
           <InlineRibbonBtn
             imgSrc={settingsWrenchIcon}
             label="Parameters"
@@ -708,7 +710,7 @@ export function Header({
           />
         </RibbonGroup>
 
-        <RibbonGroup label="Generate" flex={2}>
+        <RibbonGroup label="Generate" flex={2} disabled={!isProjectOpen}>
           <InlineRibbonBtn
             imgSrc={inputIcon}
             label=".INP"

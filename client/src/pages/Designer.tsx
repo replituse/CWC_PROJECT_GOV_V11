@@ -690,8 +690,8 @@ function DesignerInner() {
   const [visualizationFileName, setVisualizationFileName] = useState<string>("");
   const [isRunningSimulation, setIsRunningSimulation] = useState(false);
   const [filePreview, setFilePreview] = useState<{ content: string; fileName: string; type: 'inp' | 'out' } | null>(null);
-  const [serverProjectId, setServerProjectId] = useState<number | null>(null);
-  const serverProjectIdRef = useRef<number | null>(null);
+  const [serverProjectId, setServerProjectId] = useState<string | null>(null);
+  const serverProjectIdRef = useRef<string | null>(null);
   useEffect(() => { serverProjectIdRef.current = serverProjectId; }, [serverProjectId]);
   const [showProjectsList, setShowProjectsList] = useState(false);
 
@@ -1075,6 +1075,7 @@ function DesignerInner() {
         onShowFilePreview={(content, fileName, type) => setFilePreview({ content, fileName, type })}
         onLoadProject={handleLoadFromServer}
         currentProjectId={serverProjectId}
+        isProjectOpen={projectState !== "empty"}
       />
 
       {/* Projects List Panel */}
