@@ -64,6 +64,9 @@ import { VisualizationView } from '@/components/visualization/VisualizationView'
 import { ProjectsListPanel } from '@/components/ProjectsListPanel';
 import { getAuthHeader } from '@/lib/queryClient';
 import { getAutosaveSettings } from '@/components/SettingsDialog';
+import { useAuth } from '@/context/AuthContext';
+
+const LAST_PROJECT_KEY = "whamo_last_project_id";
 
 const nodeTypes = {
   reservoir: ReservoirNode,
@@ -82,6 +85,8 @@ const edgeTypes = {
 
 function DesignerInner() {
   const { toast } = useToast();
+  const { user, isLoading: authLoading } = useAuth();
+  const hasRestoredRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow();
   const [validationData, setValidationData] = useState<{ errors: ValidationError[], warnings: ValidationError[] } | null>(null);
@@ -711,6 +716,7 @@ function DesignerInner() {
     clearNetwork();
     setServerProjectId(null);
     setProjectState("active");
+    localStorage.removeItem(LAST_PROJECT_KEY);
   };
 
   const handleLoadFromServer = (project: any) => {
@@ -736,6 +742,39 @@ function DesignerInner() {
     setShowProjectsList(false);
     toast({ title: "Project Loaded", description: `"${loadedProjectName}" opened from your account.` });
   };
+
+  // Persist last opened project so it survives hard refresh
+  useEffect(() => {
+    if (serverProjectId && user) {
+      localStorage.setItem(LAST_PROJECT_KEY, JSON.stringify({ projectId: serverProjectId, userId: user.id }));
+    } else if (!serverProjectId) {
+      localStorage.removeItem(LAST_PROJECT_KEY);
+    }
+  }, [serverProjectId, user]);
+
+  // Restore last opened project after auth resolves
+  useEffect(() => {
+    if (authLoading || !user || hasRestoredRef.current) return;
+    hasRestoredRef.current = true;
+
+    const stored = localStorage.getItem(LAST_PROJECT_KEY);
+    if (!stored) return;
+
+    try {
+      const { projectId, userId } = JSON.parse(stored);
+      if (userId !== user.id) {
+        localStorage.removeItem(LAST_PROJECT_KEY);
+        return;
+      }
+      fetch(`/api/projects/${projectId}`, { headers: getAuthHeader() })
+        .then((res) => (res.ok ? res.json() : null))
+        .then((project) => { if (project) handleLoadFromServer(project); })
+        .catch(() => {});
+    } catch {
+      localStorage.removeItem(LAST_PROJECT_KEY);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authLoading, user]);
 
   const handleLoadFromFileSystem = async () => {
     if ('showOpenFilePicker' in window) {
@@ -1118,7 +1157,7 @@ function DesignerInner() {
       {/* Main Content Area */}
       <div className="flex-1 overflow-hidden relative">
         {projectState === "empty" && nodes.length === 0 && edges.length === 0 && (
-          <div className="absolute inset-0 z-[100] flex items-center justify-center pointer-events-none">
+          <div className="absolute inset-0 z-[1] flex items-center justify-center pointer-events-none">
             <div className="flex gap-12 pointer-events-auto">
               {/* New Project Card */}
               <div 
