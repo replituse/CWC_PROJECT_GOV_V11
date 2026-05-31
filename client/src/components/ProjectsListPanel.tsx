@@ -385,10 +385,10 @@ export function ProjectsListPanel({ onClose, onLoadProject, onLoadFromFile, curr
                               Shared with me
                             </span>
                           )}
-                          {isOwner && project.sharedWith.length > 0 && (
+                          {isOwner && (project.sharedWith?.length ?? 0) > 0 && (
                             <span className="text-[10px] font-bold px-1.5 py-0.5 bg-emerald-100 text-emerald-700 rounded-full flex-shrink-0 flex items-center gap-0.5">
                               <Share2 className="w-2.5 h-2.5" />
-                              Shared ({project.sharedWith.length})
+                              Shared ({project.sharedWith?.length ?? 0})
                             </span>
                           )}
                         </div>
