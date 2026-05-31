@@ -46,7 +46,11 @@ import {
   Minimize2, 
   ChevronDown, 
   ChevronUp,
-  Layout
+  Layout,
+  Sun,
+  Moon,
+  Pencil,
+  Check
 } from 'lucide-react';
 import networkIcon from '@assets/network_1779525899254.png';
 import eyeOpenIcon from '@assets/view_(2)_1779527800443.png';
@@ -704,6 +708,9 @@ function DesignerInner() {
   const [visualizationFileName, setVisualizationFileName] = useState<string>("");
   const [isRunningSimulation, setIsRunningSimulation] = useState(false);
   const [filePreview, setFilePreview] = useState<{ content: string; fileName: string; type: 'inp' | 'out' } | null>(null);
+  const [previewLightMode, setPreviewLightMode] = useState(false);
+  const [previewEditing, setPreviewEditing] = useState(false);
+  const [previewEditedContent, setPreviewEditedContent] = useState('');
   const [serverProjectId, setServerProjectId] = useState<string | null>(null);
   const serverProjectIdRef = useRef<string | null>(null);
   useEffect(() => { serverProjectIdRef.current = serverProjectId; }, [serverProjectId]);
@@ -1225,78 +1232,188 @@ function DesignerInner() {
                 )}
                 {filePreview ? (
                   /* ── Inline File Preview (replaces canvas) ── */
-                  <div className="flex flex-col w-full h-full bg-[#1e1e2e]">
-                    {/* Header bar */}
-                    <div className="flex items-center justify-between px-5 py-3 bg-[#181825] border-b border-[#313244] flex-shrink-0">
-                      <div className="flex items-center gap-3">
-                        <span
-                          className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-                            filePreview.type === 'inp'
-                              ? 'bg-blue-900/60 text-blue-300 border-blue-700'
-                              : 'bg-emerald-900/60 text-emerald-300 border-emerald-700'
-                          }`}
-                          style={{ fontFamily: 'Poppins, sans-serif' }}
+                  (() => {
+                    // Sync edited content when filePreview changes
+                    const currentContent = previewEditedContent || filePreview.content;
+                    const isLight = previewLightMode;
+                    const theme = {
+                      bg: isLight ? '#f8f9fb' : '#1e1e2e',
+                      text: isLight ? '#1e293b' : '#cdd6f4',
+                      headerBg: isLight ? '#ffffff' : '#181825',
+                      headerBorder: isLight ? '#e2e8f0' : '#313244',
+                      lineNumBg: isLight ? '#f1f5f9' : '#181825',
+                      lineNumText: isLight ? '#94a3b8' : '#6c7086',
+                      lineNumBorder: isLight ? '#e2e8f0' : '#313244',
+                      countText: isLight ? '#94a3b8' : '#6c7086',
+                      btnBg: isLight ? '#f1f5f9' : '#313244',
+                      btnText: isLight ? '#475569' : '#cdd6f4',
+                      btnHoverBg: isLight ? '#e2e8f0' : '#45475a',
+                      hoverRowBg: isLight ? 'rgba(0,0,0,0.03)' : 'rgba(255,255,255,0.04)',
+                      badgeBg: filePreview.type === 'inp'
+                        ? (isLight ? '#dbeafe' : 'rgba(59,130,246,0.2)')
+                        : (isLight ? '#d1fae5' : 'rgba(16,185,129,0.2)'),
+                      badgeText: filePreview.type === 'inp'
+                        ? (isLight ? '#1d4ed8' : '#60a5fa')
+                        : (isLight ? '#065f46' : '#34d399'),
+                      badgeBorder: filePreview.type === 'inp'
+                        ? (isLight ? '#bfdbfe' : 'rgba(59,130,246,0.3)')
+                        : (isLight ? '#a7f3d0' : 'rgba(16,185,129,0.3)'),
+                    };
+                    const monoFont = '"JetBrains Mono","Fira Code","Cascadia Code",monospace';
+                    const poppins = 'Poppins, sans-serif';
+                    const displayContent = previewEditing ? previewEditedContent : filePreview.content;
+
+                    return (
+                      <div className="flex flex-col w-full h-full" style={{ background: theme.bg }}>
+                        {/* Header bar */}
+                        <div
+                          className="flex items-center justify-between px-5 py-3 flex-shrink-0"
+                          style={{ background: theme.headerBg, borderBottom: `1px solid ${theme.headerBorder}` }}
                         >
-                          {filePreview.type === 'inp' ? 'INP' : 'OUT'}
-                        </span>
-                        <span
-                          className="text-sm font-semibold text-[#cdd6f4] truncate max-w-[400px]"
-                          style={{ fontFamily: 'Poppins, sans-serif' }}
-                        >
-                          {filePreview.fileName}
-                        </span>
-                        <span className="text-xs text-[#6c7086]" style={{ fontFamily: 'Poppins, sans-serif' }}>
-                          {filePreview.content.split('\n').length.toLocaleString()} lines
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => {
-                            const blob = new Blob([filePreview.content], { type: 'text/plain;charset=utf-8' });
-                            saveAs(blob, filePreview.fileName);
-                          }}
-                          className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-sm font-semibold rounded-lg transition-colors"
-                          style={{ fontFamily: 'Poppins, sans-serif' }}
-                          data-testid="btn-preview-download"
-                        >
-                          <Download className="w-3.5 h-3.5" />
-                          Download {filePreview.type === 'inp' ? 'INP' : 'OUT'}
-                        </button>
-                        <button
-                          onClick={() => setFilePreview(null)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#313244] hover:bg-[#45475a] text-[#cdd6f4] text-sm font-semibold rounded-lg transition-colors"
-                          style={{ fontFamily: 'Poppins, sans-serif' }}
-                          data-testid="btn-preview-close"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                          Close
-                        </button>
-                      </div>
-                    </div>
-                    {/* Code content with line numbers */}
-                    <div className="flex-1 overflow-auto">
-                      <table className="w-full border-collapse">
-                        <tbody>
-                          {filePreview.content.split('\n').map((line, i) => (
-                            <tr key={i} className="hover:bg-white/5 group">
-                              <td
-                                className="select-none text-right pr-4 pl-4 text-[#6c7086] text-xs leading-6 w-12 border-r border-[#313244] align-top"
-                                style={{ fontFamily: '"JetBrains Mono","Fira Code",monospace', minWidth: '3rem' }}
+                          <div className="flex items-center gap-3">
+                            <span
+                              className="text-[11px] font-bold px-2.5 py-0.5 rounded-full border"
+                              style={{ fontFamily: poppins, background: theme.badgeBg, color: theme.badgeText, borderColor: theme.badgeBorder }}
+                            >
+                              {filePreview.type === 'inp' ? 'INP' : 'OUT'}
+                            </span>
+                            <span
+                              className="text-sm font-semibold truncate max-w-[350px]"
+                              style={{ fontFamily: poppins, color: theme.text }}
+                            >
+                              {filePreview.fileName}
+                            </span>
+                            <span className="text-xs" style={{ fontFamily: poppins, color: theme.countText }}>
+                              {displayContent.split('\n').length.toLocaleString()} lines
+                            </span>
+                            {previewEditing && (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse"
+                                style={{ background: '#fef3c7', color: '#92400e', fontFamily: poppins }}
                               >
-                                {i + 1}
-                              </td>
-                              <td
-                                className="pl-5 pr-4 text-[#cdd6f4] text-[13px] leading-6 whitespace-pre align-top"
-                                style={{ fontFamily: '"JetBrains Mono","Fira Code",monospace' }}
+                                EDITING
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {/* Light/Dark toggle */}
+                            <button
+                              onClick={() => setPreviewLightMode(m => !m)}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                              style={{ background: theme.btnBg, color: theme.btnText, fontFamily: poppins }}
+                              title={isLight ? 'Switch to dark mode' : 'Switch to light mode'}
+                              data-testid="btn-preview-theme-toggle"
+                            >
+                              {isLight ? <Moon className="w-3.5 h-3.5" /> : <Sun className="w-3.5 h-3.5" />}
+                              {isLight ? 'Dark' : 'Light'}
+                            </button>
+                            {/* Edit / Done — INP only */}
+                            {filePreview.type === 'inp' && (
+                              <button
+                                onClick={() => {
+                                  if (!previewEditing) {
+                                    setPreviewEditedContent(filePreview.content);
+                                    setPreviewEditing(true);
+                                  } else {
+                                    setPreviewEditing(false);
+                                  }
+                                }}
+                                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors"
+                                style={{
+                                  background: previewEditing ? 'rgba(59,130,246,0.15)' : theme.btnBg,
+                                  color: previewEditing ? '#60a5fa' : theme.btnText,
+                                  border: previewEditing ? '1px solid rgba(59,130,246,0.3)' : '1px solid transparent',
+                                  fontFamily: poppins,
+                                }}
+                                data-testid="btn-preview-edit"
                               >
-                                {line || ' '}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
+                                {previewEditing
+                                  ? <><Check className="w-3.5 h-3.5" /> Done</>
+                                  : <><Pencil className="w-3.5 h-3.5" /> Edit</>
+                                }
+                              </button>
+                            )}
+                            {/* Download */}
+                            <button
+                              onClick={() => {
+                                const content = previewEditing ? previewEditedContent : filePreview.content;
+                                const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+                                saveAs(blob, filePreview.fileName);
+                              }}
+                              className="flex items-center gap-1.5 px-4 py-1.5 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-semibold rounded-lg transition-colors"
+                              style={{ fontFamily: poppins }}
+                              data-testid="btn-preview-download"
+                            >
+                              <Download className="w-3.5 h-3.5" />
+                              Download {filePreview.type === 'inp' ? 'INP' : 'OUT'}
+                            </button>
+                            {/* Close */}
+                            <button
+                              onClick={() => { setFilePreview(null); setPreviewEditing(false); setPreviewEditedContent(''); }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                              style={{ background: theme.btnBg, color: theme.btnText, fontFamily: poppins }}
+                              data-testid="btn-preview-close"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                              Close
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Code content */}
+                        <div className="flex-1 overflow-hidden flex">
+                          {/* Line numbers column */}
+                          <div
+                            className="flex-shrink-0 overflow-hidden select-none"
+                            style={{ background: theme.lineNumBg, borderRight: `1px solid ${theme.lineNumBorder}`, width: 52 }}
+                          >
+                            <div
+                              style={{
+                                fontFamily: monoFont,
+                                fontSize: 13,
+                                lineHeight: '1.75',
+                                color: theme.lineNumText,
+                                padding: '20px 12px 20px 8px',
+                                textAlign: 'right',
+                                whiteSpace: 'pre',
+                              }}
+                            >
+                              {displayContent.split('\n').map((_, i) => `${i + 1}\n`).join('')}
+                            </div>
+                          </div>
+
+                          {/* Editor or viewer */}
+                          {previewEditing ? (
+                            <textarea
+                              autoFocus
+                              value={previewEditedContent}
+                              onChange={(e) => setPreviewEditedContent(e.target.value)}
+                              className="flex-1 resize-none outline-none border-none p-5"
+                              style={{
+                                fontFamily: monoFont,
+                                fontSize: 13,
+                                lineHeight: '1.75',
+                                background: theme.bg,
+                                color: theme.text,
+                                caretColor: '#60a5fa',
+                              }}
+                              spellCheck={false}
+                              data-testid="textarea-inp-editor"
+                            />
+                          ) : (
+                            <div className="flex-1 overflow-auto">
+                              <pre
+                                className="text-[13px] leading-[1.75] p-5 whitespace-pre min-h-full"
+                                style={{ fontFamily: monoFont, color: theme.text, background: theme.bg }}
+                              >
+                                {filePreview.content}
+                              </pre>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()
                 ) : (
                   <>
                     <ReactFlow
