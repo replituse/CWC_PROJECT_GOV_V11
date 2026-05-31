@@ -319,6 +319,16 @@ function getRowValue(
   return val as string | number;
 }
 
+// ─── Column letter helper ─────────────────────────────────────────────────────
+
+// 0-based column index → Excel letter (A, B, … Z, AA, AB…)
+function excelColLetter(idx: number): string {
+  const n = idx + 1;
+  if (n <= 26) return String.fromCharCode(64 + n);
+  return String.fromCharCode(64 + Math.floor((n - 1) / 26)) +
+         String.fromCharCode(64 + ((n - 1) % 26) + 1);
+}
+
 // ─── Styling constants ────────────────────────────────────────────────────────
 
 const HEADER_FILL: ExcelJS.Fill = {
@@ -537,18 +547,56 @@ export async function exportTabToExcel(
     excelRow.height = 18;
   });
 
+  // ── Conduit: inject friction/celerity Excel formulas ──
+  // When the user edits Manning's n or E/WT/Diameter in Excel, these cells
+  // auto-recompute using the same formulas the app uses.
+  if (filter === 'conduit' && rows.length > 0) {
+    const unitIdx     = cols.findIndex(c => c.key === '_unit');
+    const diamIdx     = cols.findIndex(c => c.key === 'diameter');
+    const manNIdx     = cols.findIndex(c => c.key === 'manningsN');
+    const pipeEIdx    = cols.findIndex(c => c.key === 'pipeE');
+    const pipeWTIdx   = cols.findIndex(c => c.key === 'pipeWT');
+    const frictionIdx = cols.findIndex(c => c.key === 'friction');
+    const celerityIdx = cols.findIndex(c => c.key === 'celerity');
+
+    if (unitIdx >= 0 && diamIdx >= 0) {
+      const unitCol = excelColLetter(unitIdx);
+      const diamCol = excelColLetter(diamIdx);
+
+      // Friction = K * n^2 / D^(1/3)  where K=124.58 (SI) or 185 (FPS)
+      if (manNIdx >= 0 && frictionIdx >= 0) {
+        const manNCol = excelColLetter(manNIdx);
+        const frCol   = excelColLetter(frictionIdx);
+        rows.forEach((_, rowIdx) => {
+          const r = rowIdx + 3; // row 1=header, 2=hint, 3+=data
+          ws.getCell(`${frCol}${r}`).value = {
+            formula: `IF(AND(${manNCol}${r}>0,${diamCol}${r}>0),IF(${unitCol}${r}="SI",124.58,185)*${manNCol}${r}^2/${diamCol}${r}^(1/3),"")`,
+            result: '',
+          } as any;
+        });
+      }
+
+      // Celerity = C0 / sqrt(1 + (Kw/E)*(D/WT))
+      // C0=1440 (SI)/4720 (FPS), Kw=2.07e9 (SI)/300000 (FPS)
+      if (pipeEIdx >= 0 && pipeWTIdx >= 0 && celerityIdx >= 0) {
+        const pipeECol  = excelColLetter(pipeEIdx);
+        const pipeWTCol = excelColLetter(pipeWTIdx);
+        const celCol    = excelColLetter(celerityIdx);
+        rows.forEach((_, rowIdx) => {
+          const r = rowIdx + 3;
+          ws.getCell(`${celCol}${r}`).value = {
+            formula: `IF(AND(${pipeECol}${r}>0,${pipeWTCol}${r}>0,${diamCol}${r}>0),IF(${unitCol}${r}="SI",1440,4720)/SQRT(1+IF(${unitCol}${r}="SI",2.07E9,300000)/${pipeECol}${r}*(${diamCol}${r}/${pipeWTCol}${r})),"")`,
+            result: '',
+          } as any;
+        });
+      }
+    }
+  }
+
   // ── Conditional Formatting: dynamic per-mode locking for reservoir ──
   // This makes cells visually respond LIVE when the user changes BC Mode in Excel.
   if (filter === 'reservoir' && rows.length > 0) {
     const maxDataRow = rows.length + 2; // 1 header + 1 hint + N data rows
-
-    // Helper: 0-based column index → Excel letter (A, B, … Z, AA, AB…)
-    const excelColLetter = (idx: number): string => {
-      const n = idx + 1;
-      if (n <= 26) return String.fromCharCode(64 + n);
-      return String.fromCharCode(64 + Math.floor((n - 1) / 26)) +
-             String.fromCharCode(64 + ((n - 1) % 26) + 1);
-    };
 
     const modeIdx    = cols.findIndex(c => c.key === 'mode');
     const resElevIdx = cols.findIndex(c => c.key === 'reservoirElevation');

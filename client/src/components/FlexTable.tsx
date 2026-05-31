@@ -8,8 +8,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
-import { X, Check, Plus, Trash2 } from 'lucide-react';
-import { exportTabToExcel, TAB_COLS, type FilterKey as ExcelFilterKey, type ExportRow } from '@/lib/excel-io';
+import { X, Check, Plus, Trash2, Download, Upload } from 'lucide-react';
+import { exportTabToExcel, importTabFromExcel, TAB_COLS, type FilterKey as ExcelFilterKey, type ExportRow } from '@/lib/excel-io';
 
 interface FlexTableProps {
   open: boolean;
@@ -1154,6 +1154,8 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
   const [activeFilter, setActiveFilter] = useState<FilterKey>('all');
   const [pairsEditor, setPairsEditor] = useState<PairsEditorState | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+  const importFileRef = useRef<HTMLInputElement>(null);
 
   const allRows = useMemo<UnifiedRow[]>(() => {
     const nodeRows = new Map(nodes.map(n => [n.id, {
@@ -1369,6 +1371,41 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
   }, [activeFilter, filteredRows, globalUnit, tabLabel, isExporting, toast]);
 
 
+  const handleImport = useCallback(async (file: File) => {
+    if (isImporting) return;
+    const excelFilter = activeFilter as ExcelFilterKey;
+    if (!TAB_COLS[excelFilter]) {
+      toast({ title: 'Import not available', description: 'No column definition for this filter.', variant: 'destructive' });
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const rowsToImport = excelFilter === 'node'
+        ? filteredRows.filter(r => r.subType === 'node')
+        : filteredRows;
+      const exportRows: ExportRow[] = rowsToImport.map(r => ({
+        id: r.id, kind: r.kind, subType: r.subType, data: r.data,
+      }));
+      const { updates, hScheduleUpdates, skipped, matched } = await importTabFromExcel(
+        excelFilter, exportRows, globalUnit, file
+      );
+      updates.forEach(upd => {
+        if (upd.kind === 'edge') updateEdgeData(upd.id, upd.data);
+        else updateNodeData(upd.id, upd.data);
+      });
+      hScheduleUpdates.forEach(upd => {
+        addHSchedule(upd.scheduleNumber);
+        updateHSchedule(upd.scheduleNumber, upd.points);
+      });
+      toast({ title: 'Import complete', description: `${matched} row${matched !== 1 ? 's' : ''} updated, ${skipped} skipped.` });
+    } catch (err: any) {
+      toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (importFileRef.current) importFileRef.current.value = '';
+    }
+  }, [isImporting, activeFilter, filteredRows, globalUnit, updateEdgeData, updateNodeData, addHSchedule, updateHSchedule, toast]);
+
   // Build editor title/labels — use element's own unit if set
   const editorRow = pairsEditor ? allRows.find(r => r.id === pairsEditor.rowId) : null;
   const editorUnit: UnitSystem = (editorRow?.data?.unit as UnitSystem) || globalUnit;
@@ -1518,6 +1555,53 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
                 Clear
               </button>
             )}
+            <div className="ml-auto flex items-center gap-1.5">
+              {TAB_COLS[activeFilter as ExcelFilterKey] && (
+                <>
+                  <button
+                    data-testid="flextable-export-btn"
+                    disabled={isExporting || filteredRows.length === 0}
+                    onClick={handleExport}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded border text-[11px] font-semibold transition-colors',
+                      isExporting || filteredRows.length === 0
+                        ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                        : 'border-[#1a73e8] text-[#1a73e8] bg-white hover:bg-blue-50'
+                    )}
+                    title={`Export ${tabLabel} tab to Excel`}
+                  >
+                    <Download className="h-3 w-3" />
+                    {isExporting ? 'Exporting…' : 'Export Excel'}
+                  </button>
+                  <button
+                    data-testid="flextable-import-btn"
+                    disabled={isImporting}
+                    onClick={() => importFileRef.current?.click()}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 px-3 py-1 rounded border text-[11px] font-semibold transition-colors',
+                      isImporting
+                        ? 'border-slate-200 text-slate-300 bg-slate-50 cursor-not-allowed'
+                        : 'border-emerald-600 text-emerald-700 bg-white hover:bg-emerald-50'
+                    )}
+                    title={`Import ${tabLabel} tab from Excel`}
+                  >
+                    <Upload className="h-3 w-3" />
+                    {isImporting ? 'Importing…' : 'Import Excel'}
+                  </button>
+                  <input
+                    ref={importFileRef}
+                    type="file"
+                    accept=".xlsx"
+                    className="hidden"
+                    data-testid="flextable-import-file"
+                    onChange={e => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImport(file);
+                    }}
+                  />
+                </>
+              )}
+            </div>
           </div>
 
           {/* ── Table ── */}
