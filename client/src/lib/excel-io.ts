@@ -813,7 +813,12 @@ export async function importTabFromExcel(
       const cell = excelRow.getCell(colNum);
       const rawVal = cell.value;
       if (rawVal === null || rawVal === undefined || rawVal === '') return;
-      const strVal = String(rawVal).trim();
+      // ExcelJS returns formula cells as { formula, result } — extract the computed result
+      const effectiveVal = (rawVal !== null && typeof rawVal === 'object' && 'result' in (rawVal as object))
+        ? (rawVal as { formula: string; result: any }).result
+        : rawVal;
+      if (effectiveVal === null || effectiveVal === undefined || effectiveVal === '') return;
+      const strVal = String(effectiveVal).trim();
       if (!strVal) return;
 
       // Skip cells that contain the "NA" sentinel — they are conditionally locked
