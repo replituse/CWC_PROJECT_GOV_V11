@@ -377,8 +377,9 @@ export async function exportTabToExcel(
   tabLabel: string,
   hSchedules?: HSchedule[],
 ): Promise<void> {
-  const cols = TAB_COLS[filter];
-  if (!cols) throw new Error(`Unknown filter: ${filter}`);
+  if (!TAB_COLS[filter]) throw new Error(`Unknown filter: ${filter}`);
+  // Strip read-only columns — informational only, not needed in the downloaded file
+  const cols = TAB_COLS[filter].filter(c => !c.readOnly);
 
   const wb = new ExcelJS.Workbook();
   wb.creator = 'WHAMO Network Designer';
