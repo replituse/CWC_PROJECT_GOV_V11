@@ -385,21 +385,24 @@ export async function exportTabToExcel(
   wb.created = new Date();
 
   // ── Hidden "Lists" sheet for long dropdowns (e.g. Pipe Material, 63 items) ──
+  // Only created when the current tab actually has long-list columns.
   const longListCols = cols.filter(c => c.isLongList && c.options);
-  const listsWs = wb.addWorksheet('_Lists');
-  listsWs.state = 'hidden';
-
-  // One column per long-list field; header = col key (used to build the formula ref)
   const listRanges: Record<string, string> = {};
-  longListCols.forEach((col, i) => {
-    const colLetter = String.fromCharCode(65 + i); // A, B, C…
-    if (col.options) {
-      col.options.forEach((opt, r) => {
-        listsWs.getCell(`${colLetter}${r + 1}`).value = opt;
-      });
-      listRanges[col.key] = `_Lists!$${colLetter}$1:$${colLetter}$${col.options.length}`;
-    }
-  });
+
+  if (longListCols.length > 0) {
+    const listsWs = wb.addWorksheet('_Lists');
+    listsWs.state = 'veryHidden'; // invisible in Excel UI; cannot be unhidden without VBA
+
+    longListCols.forEach((col, i) => {
+      const colLetter = String.fromCharCode(65 + i); // A, B, C…
+      if (col.options) {
+        col.options.forEach((opt, r) => {
+          listsWs.getCell(`${colLetter}${r + 1}`).value = opt;
+        });
+        listRanges[col.key] = `_Lists!$${colLetter}$1:$${colLetter}$${col.options.length}`;
+      }
+    });
+  }
 
   // ── Main data sheet ──
   const ws = wb.addWorksheet(tabLabel, {
@@ -660,7 +663,12 @@ export async function exportTabToExcel(
       // Applied to ALL reservoir rows so the dropdown is ready when user switches BC Mode in Excel.
       if (hSchedIdx >= 0 && hSchedules && hSchedules.length > 0) {
         const schedNums = hSchedules.map(s => s.number);
-        const listsSheet = wb.getWorksheet('_Lists');
+        // Create _Lists lazily if it wasn't needed for long-list columns
+        let listsSheet = wb.getWorksheet('_Lists');
+        if (!listsSheet) {
+          listsSheet = wb.addWorksheet('_Lists');
+          listsSheet.state = 'veryHidden';
+        }
         if (listsSheet) {
           // Find the next free column in _Lists
           const usedCols = listsSheet.columnCount || 0;
