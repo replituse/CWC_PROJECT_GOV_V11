@@ -126,7 +126,7 @@ export const ConnectionEdge = memo(({
               <div style={{ cursor: 'default' }}>
                 {isPump && <ElementCircle icon={waterPumpIcon} alt="Pump" label={edgeLabel} />}
                 {isCheckValve && <ElementCircle icon={pipeIcon} alt="Check Valve" label={edgeLabel} />}
-                {isTurbine && <TurbineDiamond icon={turbineImgIcon} label={edgeLabel} />}
+                {isTurbine && <ElementCircle icon={turbineImgIcon} alt="Turbine" label={edgeLabel} />}
               </div>
             ) : (
               <div className="bg-white px-2 py-0.5 rounded-full border border-black text-[11px] font-semibold text-black cursor-default hover:bg-slate-50 transition-colors">
