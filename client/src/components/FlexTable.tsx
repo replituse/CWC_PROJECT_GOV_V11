@@ -9,7 +9,10 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { X, Check, Plus, Trash2, Download, Upload } from 'lucide-react';
-import { exportTabToExcel, importTabFromExcel, TAB_COLS, type FilterKey as ExcelFilterKey, type ExportRow } from '@/lib/excel-io';
+import {
+  exportTabToExcel, importTabFromExcel, exportAllSheetsToExcel, importAllSheetsFromExcel,
+  TAB_COLS, type FilterKey as ExcelFilterKey, type ExportRow, type ImportSheetSummary,
+} from '@/lib/excel-io';
 
 interface FlexTableProps {
   open: boolean;
@@ -1155,6 +1158,8 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
   const [pairsEditor, setPairsEditor] = useState<PairsEditorState | null>(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
+  const [importSummary, setImportSummary] = useState<ImportSheetSummary[] | null>(null);
+  const [showImportSummary, setShowImportSummary] = useState(false);
   const importFileRef = useRef<HTMLInputElement>(null);
 
   const allRows = useMemo<UnifiedRow[]>(() => {
@@ -1346,65 +1351,96 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
 
   const handleExport = useCallback(async () => {
     if (isExporting) return;
-    const excelFilter = activeFilter as ExcelFilterKey;
-    if (!TAB_COLS[excelFilter]) {
-      toast({ title: 'Export not available', description: 'No column definition for this filter.', variant: 'destructive' });
-      return;
-    }
     setIsExporting(true);
     try {
-      // For the "Node" tab, only export basic nodes — specialized types
-      // (reservoir, junction, surgeTank, etc.) have their own dedicated tabs
-      const rowsToExport = excelFilter === 'node'
-        ? filteredRows.filter(r => r.subType === 'node')
-        : filteredRows;
-      const exportRows: ExportRow[] = rowsToExport.map(r => ({
-        id: r.id, kind: r.kind, subType: r.subType, data: r.data,
-      }));
-      await exportTabToExcel(excelFilter, exportRows, globalUnit, tabLabel, hSchedules ?? []);
-      toast({ title: 'Export complete', description: `${tabLabel} tab exported as Excel.` });
+      if (activeFilter === 'all') {
+        // Multi-sheet workbook: one sheet per element type
+        const exportRows: ExportRow[] = allRows.map(r => ({
+          id: r.id, kind: r.kind, subType: r.subType, data: r.data,
+        }));
+        const { projectName } = useNetworkStore.getState();
+        await exportAllSheetsToExcel(exportRows, globalUnit, projectName, hSchedules ?? []);
+        toast({ title: 'Export complete', description: 'All element types exported as a multi-sheet workbook.' });
+      } else {
+        const excelFilter = activeFilter as ExcelFilterKey;
+        if (!TAB_COLS[excelFilter]) {
+          toast({ title: 'Export not available', description: 'No column definition for this filter.', variant: 'destructive' });
+          return;
+        }
+        const rowsToExport = excelFilter === 'node'
+          ? filteredRows.filter(r => r.subType === 'node')
+          : filteredRows;
+        const exportRows: ExportRow[] = rowsToExport.map(r => ({
+          id: r.id, kind: r.kind, subType: r.subType, data: r.data,
+        }));
+        await exportTabToExcel(excelFilter, exportRows, globalUnit, tabLabel, hSchedules ?? []);
+        toast({ title: 'Export complete', description: `${tabLabel} tab exported as Excel.` });
+      }
     } catch (err: any) {
       toast({ title: 'Export failed', description: err.message, variant: 'destructive' });
     } finally {
       setIsExporting(false);
     }
-  }, [activeFilter, filteredRows, globalUnit, tabLabel, isExporting, toast]);
+  }, [activeFilter, allRows, filteredRows, globalUnit, tabLabel, isExporting, hSchedules, toast]);
 
 
   const handleImport = useCallback(async (file: File) => {
     if (isImporting) return;
-    const excelFilter = activeFilter as ExcelFilterKey;
-    if (!TAB_COLS[excelFilter]) {
-      toast({ title: 'Import not available', description: 'No column definition for this filter.', variant: 'destructive' });
-      return;
-    }
     setIsImporting(true);
     try {
-      const rowsToImport = excelFilter === 'node'
-        ? filteredRows.filter(r => r.subType === 'node')
-        : filteredRows;
-      const exportRows: ExportRow[] = rowsToImport.map(r => ({
-        id: r.id, kind: r.kind, subType: r.subType, data: r.data,
-      }));
-      const { updates, hScheduleUpdates, skipped, matched } = await importTabFromExcel(
-        excelFilter, exportRows, globalUnit, file
-      );
-      updates.forEach(upd => {
-        if (upd.kind === 'edge') updateEdgeData(upd.id, upd.data);
-        else updateNodeData(upd.id, upd.data);
-      });
-      hScheduleUpdates.forEach(upd => {
-        addHSchedule(upd.scheduleNumber);
-        updateHSchedule(upd.scheduleNumber, upd.points);
-      });
-      toast({ title: 'Import complete', description: `${matched} row${matched !== 1 ? 's' : ''} updated, ${skipped} skipped.` });
+      if (activeFilter === 'all') {
+        // Multi-sheet import
+        const allExportRows: ExportRow[] = allRows.map(r => ({
+          id: r.id, kind: r.kind, subType: r.subType, data: r.data,
+        }));
+        const { updates, hScheduleUpdates, summary, totalMatched, totalSkipped } =
+          await importAllSheetsFromExcel(allExportRows, globalUnit, file);
+        updates.forEach(upd => {
+          if (upd.kind === 'edge') updateEdgeData(upd.id, upd.data);
+          else updateNodeData(upd.id, upd.data);
+        });
+        hScheduleUpdates.forEach(upd => {
+          addHSchedule(upd.scheduleNumber);
+          updateHSchedule(upd.scheduleNumber, upd.points);
+        });
+        if (summary.length > 0) {
+          setImportSummary(summary);
+          setShowImportSummary(true);
+        } else {
+          toast({ title: 'Import complete', description: `${totalMatched} rows updated, ${totalSkipped} skipped across all sheets.` });
+        }
+      } else {
+        const excelFilter = activeFilter as ExcelFilterKey;
+        if (!TAB_COLS[excelFilter]) {
+          toast({ title: 'Import not available', description: 'No column definition for this filter.', variant: 'destructive' });
+          return;
+        }
+        const rowsToImport = excelFilter === 'node'
+          ? filteredRows.filter(r => r.subType === 'node')
+          : filteredRows;
+        const exportRows: ExportRow[] = rowsToImport.map(r => ({
+          id: r.id, kind: r.kind, subType: r.subType, data: r.data,
+        }));
+        const { updates, hScheduleUpdates, skipped, matched } = await importTabFromExcel(
+          excelFilter, exportRows, globalUnit, file
+        );
+        updates.forEach(upd => {
+          if (upd.kind === 'edge') updateEdgeData(upd.id, upd.data);
+          else updateNodeData(upd.id, upd.data);
+        });
+        hScheduleUpdates.forEach(upd => {
+          addHSchedule(upd.scheduleNumber);
+          updateHSchedule(upd.scheduleNumber, upd.points);
+        });
+        toast({ title: 'Import complete', description: `${matched} row${matched !== 1 ? 's' : ''} updated, ${skipped} skipped.` });
+      }
     } catch (err: any) {
       toast({ title: 'Import failed', description: err.message, variant: 'destructive' });
     } finally {
       setIsImporting(false);
       if (importFileRef.current) importFileRef.current.value = '';
     }
-  }, [isImporting, activeFilter, filteredRows, globalUnit, updateEdgeData, updateNodeData, addHSchedule, updateHSchedule, toast]);
+  }, [isImporting, activeFilter, allRows, filteredRows, globalUnit, updateEdgeData, updateNodeData, addHSchedule, updateHSchedule, toast]);
 
   // Build editor title/labels — use element's own unit if set
   const editorRow = pairsEditor ? allRows.find(r => r.id === pairsEditor.rowId) : null;
@@ -1637,6 +1673,73 @@ export function FlexTable({ open, onClose }: FlexTableProps) {
           initialPairs={editorInitialPairs}
           onSave={handleSavePairs}
         />
+      )}
+
+      {/* ── Import Summary Dialog ── */}
+      {showImportSummary && importSummary && (
+        <Dialog open={showImportSummary} onOpenChange={v => !v && setShowImportSummary(false)}>
+          <DialogContent
+            className="max-w-md rounded-xl shadow-2xl"
+            data-testid="import-summary-dialog"
+          >
+            <DialogHeader>
+              <DialogTitle
+                className="text-base font-bold text-black flex items-center gap-2"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+              >
+                <Check className="w-4 h-4 text-emerald-600" />
+                Import Complete
+              </DialogTitle>
+            </DialogHeader>
+            <div className="mt-2 space-y-1">
+              <p className="text-[12px] text-slate-500 mb-3" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Multi-sheet import results:
+              </p>
+              <div className="rounded-lg border border-slate-200 overflow-hidden">
+                <table className="w-full text-[12px]" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left px-3 py-2 font-semibold text-slate-700">Sheet</th>
+                      <th className="text-right px-3 py-2 font-semibold text-emerald-700">Updated</th>
+                      <th className="text-right px-3 py-2 font-semibold text-amber-600">Skipped</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {importSummary.map((row, i) => (
+                      <tr key={row.label} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                        <td className="px-3 py-1.5 font-medium text-black">{row.label}</td>
+                        <td className="px-3 py-1.5 text-right text-emerald-700 font-semibold">{row.matched}</td>
+                        <td className="px-3 py-1.5 text-right text-amber-600 font-semibold">{row.skipped}</td>
+                      </tr>
+                    ))}
+                    <tr className="bg-slate-100 border-t border-slate-200 font-bold">
+                      <td className="px-3 py-2 text-black">Total</td>
+                      <td className="px-3 py-2 text-right text-emerald-700">
+                        {importSummary.reduce((s, r) => s + r.matched, 0)}
+                      </td>
+                      <td className="px-3 py-2 text-right text-amber-600">
+                        {importSummary.reduce((s, r) => s + r.skipped, 0)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-2 leading-snug" style={{ fontFamily: 'Poppins, sans-serif' }}>
+                Skipped rows had no matching element label in the current network.
+              </p>
+            </div>
+            <div className="flex justify-end mt-4">
+              <button
+                onClick={() => setShowImportSummary(false)}
+                className="px-4 py-1.5 rounded-full bg-[#1a73e8] text-white text-[12px] font-semibold hover:bg-[#1557b0] transition-colors"
+                style={{ fontFamily: 'Poppins, sans-serif' }}
+                data-testid="import-summary-close"
+              >
+                Done
+              </button>
+            </div>
+          </DialogContent>
+        </Dialog>
       )}
     </>
   );

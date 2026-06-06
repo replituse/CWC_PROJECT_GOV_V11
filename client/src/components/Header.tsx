@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Settings,
   LogOut,
+  HelpCircle,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,6 +40,7 @@ import {
 import { SettingsDialog } from "@/components/SettingsDialog";
 import { PropSection, PropRow } from "@/components/ui/prop-section";
 import { FlexTable } from "@/components/FlexTable";
+import { HelpModal } from "@/components/HelpModal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNetworkStore } from "@/lib/store";
@@ -560,6 +562,8 @@ export function Header({
           <TitleBarBtn icon={<Redo2 className="w-[22px] h-[22px]" />} label="Redo" onClick={redo} disabled={!isProjectOpen || history.future.length === 0} />
           <div className="w-px bg-slate-200 mx-1 h-6 flex-shrink-0" />
           <TitleBarBtn imgSrc={arrangeIcon} label="Arrange" onClick={autoArrange} disabled={!isProjectOpen || nodes.length === 0} data-testid="btn-auto-arrange" />
+          <div className="w-px bg-slate-200 mx-1 h-6 flex-shrink-0" />
+          <TitleBarBtn icon={<HelpCircle className="w-[22px] h-[22px]" />} label="Help" onClick={() => setShowHelp(true)} data-testid="btn-help" />
         </div>
 
         {/* CENTER: flex-1 grows to fill space and centers the project name */}
@@ -1410,6 +1414,7 @@ export function Header({
       )}
 
       <FlexTable open={showFlexTable} onClose={() => setShowFlexTable(false)} />
+      <HelpModal open={showHelp} onClose={() => setShowHelp(false)} />
     </div>
   );
 }
