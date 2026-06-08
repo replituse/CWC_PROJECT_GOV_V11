@@ -296,6 +296,39 @@ function getRowValue(
   if (col.key === '_unit') return (data.unit as string) || globalUnit;
   if (col.key === '_materialLabel') return materialLabelById(data.materialId);
 
+  // ── Element-category helpers (mirror FlexTable's isEdge / isDummy / etc.) ──
+  const isEdgeSub    = subType === 'conduit' || subType === 'dummy';
+  const isDummySub   = subType === 'dummy';
+  const isConduitSub = subType === 'conduit';
+  const isSurgeSub   = subType === 'surgeTank';
+  const isFlowSub    = subType === 'flowBoundary';
+  const isTurbineSub = subType === 'turbine';
+
+  // ── NA: pipe-specific columns that don't apply to node rows ("all" tab) ────
+  // Pipe Type — only meaningful for edges
+  if (col.key === 'type' && !isEdgeSub) return 'NA';
+  // Node # — only meaningful for nodes
+  if (col.key === 'nodeNumber' && isEdgeSub) return 'NA';
+  // Length — conduit only (nodes and dummy pipes have no length)
+  if (col.key === 'length' && (!isEdgeSub || isDummySub)) return 'NA';
+  // Elevation — not applicable for pipe elements or flow boundaries
+  if (col.key === 'elevation' && (isEdgeSub || isFlowSub)) return 'NA';
+  // Wave Speed & Friction — applicable to pipe edges and surge tanks only
+  if ((col.key === 'celerity' || col.key === 'friction') && !isEdgeSub && !isSurgeSub) return 'NA';
+
+  // ── NA: distance and area — only applicable when VARIABLE = true ────────────
+  const isVariable = data.variable === true || data.variable === 'true';
+  if ((col.key === 'distance' || col.key === 'area') && !isVariable) return 'NA';
+
+  // ── NA: Manning's n, pipeE, pipeWT — conduit only ─────────────────────────
+  if ((col.key === 'manningsN' || col.key === 'pipeE' || col.key === 'pipeWT') && !isConduitSub) return 'NA';
+
+  // ── NA: turbine V-schedule number — only needed for GENERATE/TURBGOV/EMERGENCY ──
+  if (col.key === 'vScheduleNumber' && isTurbineSub) {
+    const opMode = String(data.operationMode || 'TURBINE');
+    if (opMode !== 'GENERATE' && opMode !== 'TURBGOV' && opMode !== 'EMERGENCY') return 'NA';
+  }
+
   // BC Mode: translate stored 'fixed'/'schedule' → display label for Excel dropdown
   if (col.key === 'mode') return modeToDisplay(data.mode);
 
@@ -641,11 +674,19 @@ async function _addWorksheetToWb(
       if (manNIdx >= 0 && frictionIdx >= 0) {
         const manNCol = excelColLetter(manNIdx);
         const frCol   = excelColLetter(frictionIdx);
-        rows.forEach((_, rowIdx) => {
+        rows.forEach((row, rowIdx) => {
           const r = rowIdx + 3; // row 1=header, 2=hint, 3+=data
+          // Pre-compute result so Excel shows the value immediately (no recalc needed)
+          const rowUnit = String(row.data.unit || globalUnit);
+          const K = rowUnit === 'SI' ? 124.58 : 185;
+          const n = parseFloat(String(row.data.manningsN ?? 0)) || 0;
+          const D = parseFloat(String(row.data.diameter ?? 0)) || 0;
+          const frResult: number | string = (n > 0 && D > 0)
+            ? K * n * n / Math.pow(D, 1 / 3)
+            : (parseFloat(String(row.data.friction ?? '')) || '');
           ws.getCell(`${frCol}${r}`).value = {
             formula: `IF(AND(${manNCol}${r}>0,${diamCol}${r}>0),IF(${unitCol}${r}="SI",124.58,185)*${manNCol}${r}^2/${diamCol}${r}^(1/3),"")`,
-            result: '',
+            result: frResult,
           } as any;
         });
       }
@@ -656,11 +697,21 @@ async function _addWorksheetToWb(
         const pipeECol  = excelColLetter(pipeEIdx);
         const pipeWTCol = excelColLetter(pipeWTIdx);
         const celCol    = excelColLetter(celerityIdx);
-        rows.forEach((_, rowIdx) => {
+        rows.forEach((row, rowIdx) => {
           const r = rowIdx + 3;
+          // Pre-compute result so Excel shows the value immediately (no recalc needed)
+          const rowUnit = String(row.data.unit || globalUnit);
+          const C0 = rowUnit === 'SI' ? 1440 : 4720;
+          const Kw = rowUnit === 'SI' ? 2.07e9 : 3e5;
+          const E  = parseFloat(String(row.data.pipeE ?? 0)) || 0;
+          const WT = parseFloat(String(row.data.pipeWT ?? 0)) || 0;
+          const D  = parseFloat(String(row.data.diameter ?? 0)) || 0;
+          const celResult: number | string = (E > 0 && WT > 0 && D > 0)
+            ? C0 / Math.sqrt(1 + (Kw / E) * (D / WT))
+            : (parseFloat(String(row.data.celerity ?? '')) || '');
           ws.getCell(`${celCol}${r}`).value = {
             formula: `IF(AND(${pipeECol}${r}>0,${pipeWTCol}${r}>0,${diamCol}${r}>0),IF(${unitCol}${r}="SI",1440,4720)/SQRT(1+IF(${unitCol}${r}="SI",2.07E9,300000)/${pipeECol}${r}*(${diamCol}${r}/${pipeWTCol}${r})),"")`,
-            result: '',
+            result: celResult,
           } as any;
         });
       }
