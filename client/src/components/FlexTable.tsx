@@ -95,7 +95,7 @@ type ColKey = string;
 const COLS: Record<FilterKey, ColKey[]> = {
   all:         ['rowNum','type','unitToggle','label','pipeType','nodeNum','diameter','length','celerity','friction','elevation','comment'],
   conduit:     ['rowNum','unitToggle','label','pipeType','material','length','diameter','celerity','friction','manningsN','segments','inclSegments',
-                 'hasAddedLoss','cplus','cminus','pipeE','pipeWT','variable','distance','area','comment'],
+                 'hasAddedLoss','cplus','cminus','pipeE','pipeWT','variable','distance','area','d','a','comment'],
   dummy:       ['rowNum','unitToggle','label','pipeType','diameter','hasAddedLoss','cplus','cminus','comment'],
   node:        ['rowNum','type','unitToggle','label','nodeNum','elevation','comment'],
   reservoir:   ['rowNum','unitToggle','label','nodeNum','elevation','mode','resElev','hSchedNum','thPairs','comment'],
@@ -546,6 +546,7 @@ function ColHeader({ col, unit }: { col: ColKey; unit: UnitSystem }) {
     manningsN: "Manning's n", variable: 'VARIABLE',
     material: 'Pipe Material',
     distance: `Distance (${L})`, area: `Area (${A})`,
+    d: `D (${L})`, a: `A (${A})`,
     elevation: `Elevation (${L})`, resElev: `Res. Elev. (${L})`,
     mode: 'BC Mode', hSchedNum: 'H Sched #', thPairs: 'T/H Pairs',
     stType: 'Tank Type', tankTop: `Top Elev. (${L})`, tankBot: `Bot. Elev. (${L})`,
@@ -853,6 +854,16 @@ function RowCells({
       <EditableCell key={col} value={d.area ?? ''} type="text" inputMode="decimal"
         readOnly={!d.variable} dimmed={!d.variable}
         onChange={v => changeEdge('area', v)} testId={`cell-area-${row.id}`} />
+    );
+    case 'd': return (
+      <EditableCell key={col} value={d.d ?? ''} type="text" inputMode="decimal"
+        readOnly={!d.variable} dimmed={!d.variable}
+        onChange={v => changeEdge('d', v)} testId={`cell-d-${row.id}`} />
+    );
+    case 'a': return (
+      <EditableCell key={col} value={d.a ?? ''} type="text" inputMode="decimal"
+        readOnly={!d.variable} dimmed={!d.variable}
+        onChange={v => changeEdge('a', v)} testId={`cell-a-${row.id}`} />
     );
     case 'elevation': return (
       <EditableCell key={col} value={!isEdge ? fmt(d.elevation) : ''} type="text" inputMode="decimal"

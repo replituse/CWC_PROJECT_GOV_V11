@@ -106,6 +106,8 @@ export const TAB_COLS: Record<FilterKey, ColDef[]> = {
     { key: 'variable',           header: 'VARIABLE',        type: 'dropdown', options: BOOL_OPTIONS, width: 14 },
     { key: 'distance',           header: 'Distance',        type: 'number', width: 14 },
     { key: 'area',               header: 'Area',            type: 'number', width: 14 },
+    { key: 'd',                  header: 'D',               type: 'number', width: 12 },
+    { key: 'a',                  header: 'A',               type: 'number', width: 12 },
     { key: 'comment',            header: 'Comment',         type: 'text', width: 24 },
   ],
   dummy: [
@@ -319,7 +321,7 @@ function getRowValue(
 
   // ── NA: distance and area — only applicable when VARIABLE = true ────────────
   const isVariable = data.variable === true || data.variable === 'true';
-  if ((col.key === 'distance' || col.key === 'area') && !isVariable) return 'NA';
+  if ((col.key === 'distance' || col.key === 'area' || col.key === 'd' || col.key === 'a') && !isVariable) return 'NA';
 
   // ── NA: Manning's n, pipeE, pipeWT — conduit only ─────────────────────────
   if ((col.key === 'manningsN' || col.key === 'pipeE' || col.key === 'pipeWT') && !isConduitSub) return 'NA';
