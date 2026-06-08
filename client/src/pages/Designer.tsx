@@ -23,6 +23,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
 import { useNetworkStore, WhamoNode, WhamoEdge } from '@/lib/store';
+import { registerScreenToFlowPosition } from '@/lib/viewport';
 import { ReservoirNode, SimpleNode, JunctionNode, SurgeTankNode, FlowBoundaryNode, PumpNode, CheckValveNode, TurbineNode } from '@/components/NetworkNode';
 import { ConnectionEdge } from '@/components/ConnectionEdge';
 import { PropertiesPanel } from '@/components/PropertiesPanel';
@@ -93,6 +94,7 @@ function DesignerInner() {
   const hasRestoredRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow();
+  useEffect(() => { registerScreenToFlowPosition(screenToFlowPosition); }, [screenToFlowPosition]);
   const [validationData, setValidationData] = useState<{ errors: ValidationError[], warnings: ValidationError[] } | null>(null);
   const [pendingGenerateMode, setPendingGenerateMode] = useState<'inp' | 'out' | null>(null);
   const [showNodeSelection, setShowNodeSelection] = useState(false);

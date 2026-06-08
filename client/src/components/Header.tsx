@@ -44,6 +44,7 @@ import { HelpModal } from "@/components/HelpModal";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useNetworkStore } from "@/lib/store";
+import { getViewportCenter } from "@/lib/viewport";
 import {
   Dialog,
   DialogContent,
@@ -655,11 +656,11 @@ export function Header({
       <div className="flex items-stretch bg-[#f3f5f9] border-b border-slate-200 w-full">
 
         <RibbonGroup label="Insert" flex={8}>
-          <InlineRibbonBtn imgSrc={damIcon} label="Reservoir" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("reservoir", { x: 100, y: 100 }); }} />
-          <InlineRibbonBtn imgSrc={nodeCircleIcon} label="Node" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("node", { x: 150, y: 150 }); }} />
-          <InlineRibbonBtn imgSrc={yIntersectionIcon} label="Junction" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("junction", { x: 200, y: 150 }); }} />
-          <InlineRibbonBtn imgSrc={waterTankIcon} label="Surge Tank" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("surgeTank", { x: 250, y: 100 }); }} />
-          <InlineRibbonBtn imgSrc={windIcon} label="Flow BC" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("flowBoundary", { x: 50, y: 150 }); }} />
+          <InlineRibbonBtn imgSrc={damIcon} label="Reservoir" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("reservoir", getViewportCenter()); }} />
+          <InlineRibbonBtn imgSrc={nodeCircleIcon} label="Node" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("node", getViewportCenter()); }} />
+          <InlineRibbonBtn imgSrc={yIntersectionIcon} label="Junction" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("junction", getViewportCenter()); }} />
+          <InlineRibbonBtn imgSrc={waterTankIcon} label="Surge Tank" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("surgeTank", getViewportCenter()); }} />
+          <InlineRibbonBtn imgSrc={windIcon} label="Flow BC" onClick={() => { if (!isProjectOpen) onActivate?.(); addNode("flowBoundary", getViewportCenter()); }} />
           <InlineRibbonBtn
             imgSrc={waterPumpIcon}
             label="Pump"
