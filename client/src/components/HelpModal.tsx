@@ -294,7 +294,7 @@ function downloadPDF() {
   doc.setFontSize(9);
   doc.setTextColor(200, 220, 255);
   const coverTopics = [
-    'Network Elements  ·  Connections  ·  Simulations',
+    'Network Elements  ·  All Properties  ·  Connections  ·  Simulations',
     'Excel Import/Export  ·  INP/OUT Files  ·  Keyboard Shortcuts',
   ];
   let cy = PH * 0.42 + 23;
@@ -317,15 +317,16 @@ function downloadPDF() {
   doc.text('TABLE OF CONTENTS', ML, 9.5);
 
   const tocItems = [
-    ['01', 'Getting Started', 'Creating a project, opening, saving, undo/redo'],
-    ['02', 'Network Elements', 'Reservoir, Node, Junction, Surge Tank, Flow BC, Pump, Check Valve, Turbine, Conduit, Dummy Pipe'],
-    ['03', 'Connections', 'Drawing conduits, pump/valve/turbine links, connection rules, valid/invalid combinations'],
-    ['04', 'Flex Table', 'Spreadsheet editor, filters, units, T/H schedules, material'],
-    ['05', 'Excel Import/Export', 'Single-tab and multi-sheet workbook workflows'],
-    ['06', 'Running Simulations', 'Parameters, output requests, generating .OUT files'],
-    ['07', 'INP & OUT Files', 'Generating .INP, viewing .OUT, visualization tool'],
-    ['08', 'Keyboard Shortcuts', 'Canvas, Flex Table, and ReactFlow control shortcuts'],
-    ['09', 'Troubleshooting', 'Common issues and solutions'],
+    ['01', 'Getting Started',      'Creating a project, opening, saving, undo/redo'],
+    ['02', 'Network Elements',     'Reservoir, Node, Junction, Surge Tank, Flow BC, Pump, Check Valve, Turbine, Conduit, Dummy Pipe'],
+    ['03', 'All Properties',       'Full property reference for every element — name, unit, description, meaning, how to use'],
+    ['04', 'Connections',          'Drawing conduits, pump/valve/turbine links, connection rules, valid/invalid combinations'],
+    ['05', 'Flex Table',           'Spreadsheet editor, filters, units, T/H schedules, material'],
+    ['06', 'Excel Import/Export',  'Single-tab and multi-sheet workbook workflows'],
+    ['07', 'Running Simulations',  'Parameters, output requests, generating .OUT files'],
+    ['08', 'INP & OUT Files',      'Generating .INP, viewing .OUT, visualization tool'],
+    ['09', 'Keyboard Shortcuts',   'Canvas, Flex Table, and ReactFlow control shortcuts'],
+    ['10', 'Troubleshooting',      'Common issues and solutions'],
   ];
 
   let ty = 28;
@@ -411,7 +412,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('Validation rule: A Reservoir must be connected to at least one conduit. An isolated Reservoir will cause a validation error.', y, true);
 
-  newPage();
   // NODE
   y = subHeading('Node', y);
   y = para('A Node is the basic junction point in a WHAMO network. It represents a location in the piping system where pipes meet, but where no special boundary condition or demand exists. Nodes are the simplest connection element.', y);
@@ -446,7 +446,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('Demand is applied as a constant off-take. For time-varying demands, use a Flow BC element instead.', y);
 
-  newPage();
   // SURGE TANK
   y = subHeading('Surge Tank', y);
   y = para('A Surge Tank is an open or closed pressure vessel connected to the pipeline to suppress water hammer (hydraulic transients). It absorbs and releases flow to moderate pressure fluctuations and protect the system from extreme pressure events.', y);
@@ -469,7 +468,6 @@ function downloadPDF() {
   y = noteBox('Surge tanks are modelled as infinite-celerity elements internally. Do not set celerity on surge tank conduit connections — this is handled automatically.', y);
   y = noteBox('Validation: Tank Bottom must be less than Tank Top. Initial Water Level must be between Tank Bottom and Tank Top.', y, true);
 
-  newPage();
   // FLOW BC
   y = subHeading('Flow Boundary (Flow BC)', y);
   y = para('A Flow Boundary Condition (Flow BC) injects or extracts a prescribed flow rate at a specific point in the network. It acts as a source or sink of flow, either at a constant rate or following a time-varying schedule.', y);
@@ -515,7 +513,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('The pump curve (P-Char) must cover the expected operating range of Q. Extrapolation beyond the curve ends may cause simulation instability.', y, true);
 
-  newPage();
   // CHECK VALVE
   y = subHeading('Check Valve', y);
   y = para('A Check Valve is a link element that permits flow in only one direction (forward). When flow attempts to reverse, the check valve closes instantly, preventing backflow. It is used to protect system components from reverse flow conditions.', y);
@@ -554,7 +551,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('Turbines require a complete gate schedule for EMERGENCY mode. Incomplete or missing schedule data will cause the simulation to abort.', y, true);
 
-  newPage();
   // CONDUIT & DUMMY PIPE
   y = subHeading('Conduit (Pipe)', y);
   y = para('A Conduit is the fundamental flow-carrying element in WHAMO. Every pair of connected nodes is linked by a conduit, which represents a pipe section with defined hydraulic properties. The conduit carries both steady-state and transient flow between elements.', y);
@@ -589,9 +585,25 @@ function downloadPDF() {
     ['Celerity (a)', 'Set to a high value (e.g., 9999 m/s) to represent rigid-column behaviour.'],
   ], y);
 
-  // ── SECTION 3: CONNECTIONS (DETAILED) ──────────────────────────────────────
+  // ── SECTION 3: ALL PROPERTIES ──────────────────────────────────────────────
   newPage();
-  y = sectionHeading('3.  Connections (Conduits)', 22);
+  y = sectionHeading('3.  All Properties', 22);
+  y = para('Complete property reference for every element type. Each property lists its name, unit, description, meaning in the context of WHAMO simulation, and guidance on how to set the correct value.', y);
+  y += 2;
+
+  for (const ep of ALL_ELEMENT_PROPS) {
+    y = subHeading(ep.element, y);
+    const epRows: Array<[string, string]> = ep.properties.map(p => [
+      p.unit ? `${p.name}\n(${p.unit})` : p.name,
+      `${p.description} — ${p.meaning} ${p.howToUse}`,
+    ]);
+    y = propTable(epRows, y);
+    y += 2;
+  }
+
+  // ── SECTION 4: CONNECTIONS (DETAILED) ──────────────────────────────────────
+  newPage();
+  y = sectionHeading('4.  Connections', 22);
   y = para('Every pair of connected elements in WHAMO is linked by a conduit. Connections define the network topology and control how flow and pressure waves propagate through the system. This section covers all supported connection types, their rules, and best practices.', y);
   y += 2;
 
@@ -619,7 +631,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('Every conduit must have non-zero Length, Diameter, and Celerity before running a simulation. Missing values will cause a validation error.', y, true);
 
-  newPage();
   y = subHeading('Pump Link', y);
   y = para('A Pump Link is a conduit with a Pump element embedded in it. The pump adds energy to the flow according to its characteristic curve (P-Char). Pump links are used to model all types of centrifugal and axial-flow pumps.', y);
   y = miniHeading('How to Draw', y);
@@ -645,7 +656,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('The pump curve must cover the full range of expected operating Q. If Q goes outside the curve range during a transient, results may be inaccurate.', y, true);
 
-  newPage();
   y = subHeading('Check Valve Link', y);
   y = para('A Check Valve Link is a conduit that only allows forward flow. When flow velocity drops to zero or would reverse, the check valve closes instantaneously. This protects pumps and other equipment from backflow.', y);
   y = miniHeading('How to Draw', y);
@@ -682,7 +692,6 @@ function downloadPDF() {
   ], y);
   y = noteBox('For hydroelectric systems, always include a surge tank on the penstock near the turbine. Without it, load rejection transients can produce extreme over-pressures.', y, true);
 
-  newPage();
   y = subHeading('Reservoir Connections', y);
   y = para('A Reservoir connects to the network via one or more standard conduits. It provides the head boundary condition at its connection point.', y);
   y = bulletList([
@@ -711,9 +720,9 @@ function downloadPDF() {
     'Flow BC can be used as an alternative to a Reservoir where the flow (not head) is the known boundary.',
   ], y);
 
-  // ── SECTION 4: FLEX TABLE ──────────────────────────────────────────────────
+  // ── SECTION 5: FLEX TABLE ──────────────────────────────────────────────────
   newPage();
-  y = sectionHeading('4.  Flex Table', 22);
+  y = sectionHeading('5.  Flex Table', 22);
   y = para('The Flex Table gives you a spreadsheet-like view of every element in the network. Open it from Tools → Flex Table in the ribbon.', y);
   y += 2;
   y = subHeading('Tab Filters', y);
@@ -728,9 +737,9 @@ function downloadPDF() {
   y = para("Selecting a material in the Material column auto-fills Manning's n, Pipe Elastic Modulus (E), and recalculates wave speed for all conduits or just the selected row, depending on the Apply Material to All Conduits checkbox.", y);
   y = noteBox('Clicking a row in the Flex Table selects the corresponding element on the canvas (and vice versa), keeping both views in sync.', y);
 
-  // ── SECTION 5: EXCEL IMPORT/EXPORT ─────────────────────────────────────────
+  // ── SECTION 6: EXCEL IMPORT/EXPORT ─────────────────────────────────────────
   newPage();
-  y = sectionHeading('5.  Excel Import / Export', 22);
+  y = sectionHeading('6.  Excel Import / Export', 22);
   y = para('The Flex Table supports lossless round-trip Excel synchronization. Export a workbook, edit values in Excel, and import back — all element data is preserved.', y);
   y += 2;
   y = subHeading('Exporting a Single Element Type', y);
@@ -758,9 +767,9 @@ function downloadPDF() {
   y = noteBox('Import only updates existing elements — it does not create new ones. Make sure all elements exist on the canvas before importing.', y, true);
   y = noteBox('The exported workbook includes Excel data-validation dropdowns for Pipe Material, Mode, and boolean toggles. These dropdowns are preserved on re-import.', y);
 
-  // ── SECTION 6: RUNNING SIMULATIONS ─────────────────────────────────────────
+  // ── SECTION 7: RUNNING SIMULATIONS ─────────────────────────────────────────
   newPage();
-  y = sectionHeading('6.  Running Simulations', 22);
+  y = sectionHeading('7.  Running Simulations', 22);
   y = para('WHAMO Network Designer can run the WHAMO hydraulic transient engine directly. Configure parameters, specify output requests, then generate your results.', y);
   y += 2;
   y = subHeading('Computational Parameters', y);
@@ -782,9 +791,9 @@ function downloadPDF() {
   ], y);
   y = noteBox('The WHAMO engine requires Wine on Linux. It runs in an isolated temporary directory and cleans up after each run.', y);
 
-  // ── SECTION 7: INP & OUT FILES ─────────────────────────────────────────────
+  // ── SECTION 8: INP & OUT FILES ─────────────────────────────────────────────
   newPage();
-  y = sectionHeading('7.  INP & OUT Files', 22);
+  y = sectionHeading('8.  INP & OUT Files', 22);
   y = para('WHAMO uses two text-based file formats: the .INP input file and the .OUT output file. Both can be previewed, downloaded, and analysed within the Designer.', y);
   y += 2;
   y = subHeading('.INP File', y);
@@ -805,9 +814,9 @@ function downloadPDF() {
   ], y);
   y = noteBox('The .OUT file parser runs entirely client-side — no server upload is needed to view results.', y);
 
-  // ── SECTION 8: KEYBOARD SHORTCUTS ──────────────────────────────────────────
+  // ── SECTION 9: KEYBOARD SHORTCUTS ──────────────────────────────────────────
   newPage();
-  y = sectionHeading('8.  Keyboard Shortcuts', 22);
+  y = sectionHeading('9.  Keyboard Shortcuts', 22);
   y = para('Use these shortcuts to speed up common actions while working in the canvas or Flex Table.', y);
   y += 2;
   y = subHeading('Canvas Shortcuts', y);
@@ -838,9 +847,9 @@ function downloadPDF() {
     [['Click (node)'], 'Select element, show Properties Panel'],
   ], y);
 
-  // ── SECTION 9: TROUBLESHOOTING ─────────────────────────────────────────────
+  // ── SECTION 10: TROUBLESHOOTING ────────────────────────────────────────────
   newPage();
-  y = sectionHeading('9.  Troubleshooting', 22);
+  y = sectionHeading('10.  Troubleshooting', 22);
   y = para('Common issues and how to resolve them.', y);
   y += 2;
   const issues: Array<[string, string]> = [
@@ -927,7 +936,7 @@ function downloadPDF() {
     doc.line(ML, PH - 13, PW - MR, PH - 13);
   }
 
-  doc.save('WHAMO_Network_Designer_User_Manual.pdf');
+  doc.save('WHAMO_User_Manual.pdf');
 }
 
 // ─── UI helper components ─────────────────────────────────────────────────────
